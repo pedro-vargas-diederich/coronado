@@ -5,7 +5,8 @@
   "main": "src/app.js",
   "scripts": {
     "start": "node src/app.js",
-    "dev": "node --watch src/app.js"
+    "dev": "node --watch src/app.js",
+    "seed": "node scripts/seed_produccion.js"
   },
   "engines": {
     "node": ">=18.x"
@@ -28,7 +29,8 @@
     "express-ejs-layouts": "^2.5.1",
     "express-session": "^1.18.0",
     "morgan": "^1.10.0",
-    "mysql2": "^3.9.7",
+    "mysql2": "^3.24.4",
+    "sequelize": "^6.37.8",
     "uuid": "^9.0.1"
   }
 }

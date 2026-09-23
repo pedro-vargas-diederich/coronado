@@ -1,5 +1,15 @@
 const { v4: uuidv4 } = require('uuid');
-const db = require('../config/database');
+const { Op } = require('sequelize');
+const {
+  sequelize,
+  Pedido,
+  DetallePedido,
+  Producto,
+  Usuario,
+  Contacto,
+  Vehiculo,
+  Comision
+} = require('../models');
 
 const pedidosController = {
   // Listar cotizaciones y ventas
@@ -8,34 +18,38 @@ const pedidosController = {
       const usuario = req.session.usuario;
       const filtroTipo = req.query.tipo || 'TODOS';
 
-      let query = `
-        SELECT p.id, p.tipo_documento, p.codigo_orden, p.subtotal, p.impuesto, p.total,
-               p.metodo_pago, p.estado, p.fecha_vencimiento, p.observaciones, p.creado_en,
-               c.razon_social AS cliente_nombre, c.identificacion_fiscal AS cliente_nit,
-               u.nombre AS vendedor_nombre,
-               v.placa AS vehiculo_placa
-        FROM pedidos p
-        INNER JOIN contactos c ON p.cliente_id = c.id
-        INNER JOIN usuarios u ON p.vendedor_id = u.id
-        LEFT JOIN vehiculos v ON p.vehiculo_id = v.id
-        WHERE 1=1
-      `;
-      const params = [];
+      const whereConditions = {};
 
       // Si es vendedor, solo ve sus propias cotizaciones y ventas
       if (usuario.rol === 'VENDEDOR') {
-        query += ' AND p.vendedor_id = ?';
-        params.push(usuario.id);
+        whereConditions.vendedor_id = usuario.id;
       }
 
       if (filtroTipo && filtroTipo !== 'TODOS') {
-        query += ' AND p.tipo_documento = ?';
-        params.push(filtroTipo);
+        whereConditions.tipo_documento = filtroTipo;
       }
 
-      query += ' ORDER BY p.creado_en DESC';
+      const pedidosList = await Pedido.findAll({
+        where: whereConditions,
+        include: [
+          { model: Contacto, as: 'cliente', attributes: ['razon_social', 'identificacion_fiscal'] },
+          { model: Usuario, as: 'vendedor', attributes: ['nombre'] },
+          { model: Vehiculo, as: 'vehiculo', attributes: ['placa'] }
+        ],
+        order: [['creado_en', 'DESC']]
+      });
 
-      const [pedidos] = await db.query(query, params);
+      // Mapear propiedades para mantener compatibilidad total con vistas EJS
+      const pedidos = pedidosList.map(p => {
+        const item = p.get({ plain: true });
+        return {
+          ...item,
+          cliente_nombre: item.cliente ? item.cliente.razon_social : '',
+          cliente_nit: item.cliente ? item.cliente.identificacion_fiscal : '',
+          vendedor_nombre: item.vendedor ? item.vendedor.nombre : '',
+          vehiculo_placa: item.vehiculo ? item.vehiculo.placa : null
+        };
+      });
 
       res.render('pedidos/index', {
         title: usuario.rol === 'VENDEDOR' ? 'Mis Cotizaciones' : 'Cotizaciones & Ventas',
@@ -44,7 +58,7 @@ const pedidosController = {
         userRole: usuario.rol
       });
     } catch (error) {
-      console.error('[Error al listar pedidos]:', error);
+      console.error('[Error al listar pedidos con Sequelize]:', error);
       req.flash('error', 'No se pudieron consultar los pedidos.');
       res.redirect('/dashboard');
     }
@@ -55,20 +69,26 @@ const pedidosController = {
     try {
       const usuario = req.session.usuario;
 
-      // Consultar clientes
-      const [clientes] = await db.query(
-        "SELECT id, razon_social, identificacion_fiscal FROM contactos WHERE tipo IN ('CLIENTE', 'AMBOS') ORDER BY razon_social ASC"
-      );
+      // Clientes disponibles
+      const clientes = await Contacto.findAll({
+        where: { tipo: { [Op.in]: ['CLIENTE', 'AMBOS'] } },
+        attributes: ['id', 'razon_social', 'identificacion_fiscal'],
+        order: [['razon_social', 'ASC']]
+      });
 
-      // Consultar productos disponibles con stock
-      const [productos] = await db.query(
-        'SELECT id, codigo_sku, nombre, unidad_medida, precio_venta, existencia FROM productos WHERE existencia > 0 ORDER BY nombre ASC'
-      );
+      // Productos con stock mayor a cero
+      const productos = await Producto.findAll({
+        where: { existencia: { [Op.gt]: 0 } },
+        attributes: ['id', 'codigo_sku', 'nombre', 'unidad_medida', 'precio_venta', 'existencia'],
+        order: [['nombre', 'ASC']]
+      });
 
-      // Si es Admin o Socio, también puede asignar vendedor; si es vendedor, es él mismo
-      const [vendedores] = await db.query(
-        "SELECT id, nombre FROM usuarios WHERE rol = 'VENDEDOR' AND activo = 1 ORDER BY nombre ASC"
-      );
+      // Vendedores activos
+      const vendedores = await Usuario.findAll({
+        where: { rol: 'VENDEDOR', activo: true },
+        attributes: ['id', 'nombre'],
+        order: [['nombre', 'ASC']]
+      });
 
       res.render('pedidos/nuevo', {
         title: 'Nueva Cotización',
@@ -78,7 +98,7 @@ const pedidosController = {
         currentUser: usuario
       });
     } catch (error) {
-      console.error('[Error al cargar formulario de cotización]:', error);
+      console.error('[Error al preparar formulario de cotización]:', error);
       req.flash('error', 'Error al preparar el formulario de cotización.');
       res.redirect('/pedidos');
     }
@@ -86,10 +106,8 @@ const pedidosController = {
 
   // Guardar nueva cotización
   crear: async (req, res) => {
-    const connection = await db.getConnection();
+    const t = await sequelize.transaction();
     try {
-      await connection.beginTransaction();
-
       const usuario = req.session.usuario;
       const { cliente_id, metodo_pago, fecha_vencimiento, observaciones, items } = req.body;
 
@@ -97,13 +115,11 @@ const pedidosController = {
         throw new Error('Debe seleccionar un cliente.');
       }
 
-      // Vendedor asignado
       let vendedorId = usuario.id;
       if (usuario.rol !== 'VENDEDOR' && req.body.vendedor_id) {
         vendedorId = req.body.vendedor_id;
       }
 
-      // Parsear líneas de productos recibidas
       let lineas = [];
       if (typeof items === 'string') {
         lineas = JSON.parse(items);
@@ -117,10 +133,17 @@ const pedidosController = {
 
       // Generar consecutivo único COT-YYYY-XXXX
       const anio = new Date().getFullYear();
-      const [ultimas] = await connection.query(
-        "SELECT codigo_orden FROM pedidos WHERE codigo_orden LIKE ? ORDER BY CAST(SUBSTRING_INDEX(codigo_orden, '-', -1) AS UNSIGNED) DESC LIMIT 1 FOR UPDATE",
-        [`COT-${anio}-%`]
-      );
+      const ultimas = await Pedido.findAll({
+        where: {
+          codigo_orden: { [Op.like]: `COT-${anio}-%` }
+        },
+        order: [
+          [sequelize.literal(`CAST(SUBSTRING_INDEX(codigo_orden, '-', -1) AS UNSIGNED)`), 'DESC']
+        ],
+        limit: 1,
+        transaction: t,
+        lock: true
+      });
 
       let consecutivo = 1;
       if (ultimas.length > 0) {
@@ -141,60 +164,54 @@ const pedidosController = {
         subtotal += cant * precio;
       }
 
-      const impuesto = 0.00; // Si aplica IVA se puede calcular aquí
+      const impuesto = 0.00;
       const total = subtotal + impuesto;
       const pedidoId = uuidv4();
 
-      // Insertar encabezado de pedido
-      await connection.query(
-        `INSERT INTO pedidos (id, tipo_documento, codigo_orden, cliente_id, vendedor_id, subtotal, impuesto, total, metodo_pago, estado, fecha_vencimiento, observaciones)
-         VALUES (?, 'COTIZACION', ?, ?, ?, ?, ?, ?, ?, 'PENDIENTE', ?, ?)`,
-        [
-          pedidoId,
-          codigoOrden,
-          cliente_id,
-          vendedorId,
-          subtotal,
-          impuesto,
-          total,
-          metodo_pago || 'EFECTIVO',
-          fecha_vencimiento || null,
-          observaciones || null
-        ]
-      );
+      // Insertar encabezado de cotización
+      await Pedido.create({
+        id: pedidoId,
+        tipo_documento: 'COTIZACION',
+        codigo_orden: codigoOrden,
+        cliente_id,
+        vendedor_id: vendedorId,
+        subtotal,
+        impuesto,
+        total,
+        metodo_pago: metodo_pago || 'EFECTIVO',
+        estado: 'PENDIENTE',
+        fecha_vencimiento: fecha_vencimiento || null,
+        observaciones: observaciones || null
+      }, { transaction: t });
 
       // Insertar detalles de la cotización
-      for (const item of lineas) {
-        const detalleId = uuidv4();
+      const detallesAInsertar = lineas.map(item => {
         const cant = parseFloat(item.cantidad);
         const precio = parseFloat(item.precio_unitario);
-        const precioTotal = cant * precio;
+        return {
+          id: uuidv4(),
+          pedido_id: pedidoId,
+          producto_id: item.producto_id,
+          cantidad: cant,
+          precio_unitario: precio,
+          costo_unitario: 0.00,
+          precio_total: cant * precio
+        };
+      });
 
-        await connection.query(
-          `INSERT INTO detalles_pedido (id, pedido_id, producto_id, cantidad, precio_unitario, costo_unitario, precio_total)
-           VALUES (?, ?, ?, ?, ?, 0.00, ?)`,
-          [
-            detalleId,
-            pedidoId,
-            item.producto_id,
-            cant,
-            precio,
-            precioTotal
-          ]
-        );
-      }
+      await DetallePedido.bulkCreate(detallesAInsertar, { transaction: t });
 
-      await connection.commit();
+      await t.commit();
       req.flash('success', `Cotización ${codigoOrden} registrada con éxito.`);
       res.redirect(`/pedidos/ver/${pedidoId}`);
 
     } catch (error) {
-      await connection.rollback();
-      console.error('[Error al crear cotización]:', error.message);
+      if (t) {
+        try { await t.rollback(); } catch (e) {}
+      }
+      console.error('[Error al crear cotización con Sequelize]:', error.message);
       req.flash('error', error.message || 'Error al guardar la cotización.');
       res.redirect('/pedidos/nuevo');
-    } finally {
-      connection.release();
     }
   },
 
@@ -204,60 +221,80 @@ const pedidosController = {
       const { id } = req.params;
       const usuario = req.session.usuario;
 
-      // Consultar pedido
-      const [pedidos] = await db.query(
-        `SELECT p.*,
-                c.razon_social AS cliente_nombre, c.identificacion_fiscal AS cliente_nit,
-                c.telefono AS cliente_telefono, c.correo AS cliente_correo, c.direccion AS cliente_direccion,
-                u.nombre AS vendedor_nombre, u.porcentaje_comision AS vendedor_comision,
-                v.placa AS vehiculo_placa, v.modelo AS vehiculo_modelo, v.conductor_asignado
-         FROM pedidos p
-         INNER JOIN contactos c ON p.cliente_id = c.id
-         INNER JOIN usuarios u ON p.vendedor_id = u.id
-         LEFT JOIN vehiculos v ON p.vehiculo_id = v.id
-         WHERE p.id = ? LIMIT 1`,
-        [id]
-      );
+      const pedidoInstancia = await Pedido.findByPk(id, {
+        include: [
+          { model: Contacto, as: 'cliente' },
+          { model: Usuario, as: 'vendedor', attributes: ['id', 'nombre', 'porcentaje_comision'] },
+          { model: Vehiculo, as: 'vehiculo', attributes: ['id', 'placa', 'modelo', 'conductor_asignado'] }
+        ]
+      });
 
-      if (pedidos.length === 0) {
+      if (!pedidoInstancia) {
         req.flash('error', 'El documento solicitado no existe.');
         return res.redirect('/pedidos');
       }
 
-      const pedido = pedidos[0];
+      const pedidoRaw = pedidoInstancia.get({ plain: true });
 
-      // Verificación de seguridad para rol VENDEDOR
-      if (usuario.rol === 'VENDEDOR' && pedido.vendedor_id !== usuario.id) {
+      // Seguridad por rol: VENDEDOR solo puede ver sus cotizaciones/ventas
+      if (usuario.rol === 'VENDEDOR' && pedidoRaw.vendedor_id !== usuario.id) {
         req.flash('error', 'No tienes autorización para ver cotizaciones de otros vendedores.');
         return res.redirect('/pedidos');
       }
 
-      // Consultar líneas de detalle
-      const [detalles] = await db.query(
-        `SELECT d.*, pr.nombre AS producto_nombre, pr.codigo_sku, pr.unidad_medida, pr.existencia AS stock_actual
-         FROM detalles_pedido d
-         INNER JOIN productos pr ON d.producto_id = pr.id
-         WHERE d.pedido_id = ?`,
-        [id]
-      );
+      // Estructurar atributos esperados por la vista EJS
+      const pedido = {
+        ...pedidoRaw,
+        cliente_nombre: pedidoRaw.cliente ? pedidoRaw.cliente.razon_social : '',
+        cliente_nit: pedidoRaw.cliente ? pedidoRaw.cliente.identificacion_fiscal : '',
+        cliente_telefono: pedidoRaw.cliente ? pedidoRaw.cliente.telefono : '',
+        cliente_correo: pedidoRaw.cliente ? pedidoRaw.cliente.correo : '',
+        cliente_direccion: pedidoRaw.cliente ? pedidoRaw.cliente.direccion : '',
+        vendedor_nombre: pedidoRaw.vendedor ? pedidoRaw.vendedor.nombre : '',
+        vendedor_comision: pedidoRaw.vendedor ? pedidoRaw.vendedor.porcentaje_comision : 0,
+        vehiculo_placa: pedidoRaw.vehiculo ? pedidoRaw.vehiculo.placa : null,
+        vehiculo_modelo: pedidoRaw.vehiculo ? pedidoRaw.vehiculo.modelo : null,
+        conductor_asignado: pedidoRaw.vehiculo ? pedidoRaw.vehiculo.conductor_asignado : null
+      };
 
-      // Consultar vehículos disponibles para cuando se convierta a venta
-      const [vehiculos] = await db.query(
-        'SELECT id, placa, modelo, conductor_asignado FROM vehiculos WHERE activo = 1 ORDER BY placa ASC'
-      );
+      // Consultar líneas de detalle con su producto asociado
+      const detallesList = await DetallePedido.findAll({
+        where: { pedido_id: id },
+        include: [
+          { model: Producto, as: 'producto', attributes: ['nombre', 'codigo_sku', 'unidad_medida', 'existencia'] }
+        ]
+      });
 
-      // Consultar si ya tiene comisión
-      const [comisiones] = await db.query(
-        'SELECT * FROM comisiones WHERE pedido_id = ? LIMIT 1',
-        [id]
-      );
+      const detalles = detallesList.map(d => {
+        const item = d.get({ plain: true });
+        return {
+          ...item,
+          producto_nombre: item.producto ? item.producto.nombre : 'Producto no disponible',
+          codigo_sku: item.producto ? item.producto.codigo_sku : '',
+          unidad_medida: item.producto ? item.producto.unidad_medida : '',
+          stock_actual: item.producto ? item.producto.existencia : 0
+        };
+      });
+
+      // Consultar flota de vehículos activos
+      const vehiculos = await Vehiculo.findAll({
+        where: { activo: true },
+        attributes: ['id', 'placa', 'modelo', 'conductor_asignado'],
+        order: [['placa', 'ASC']]
+      });
+
+      // Consultar comisión asociada si ya existe
+      const comisionInstancia = await Comision.findOne({
+        where: { pedido_id: id }
+      });
+      const comision = comisionInstancia ? comisionInstancia.get({ plain: true }) : null;
 
       res.render('pedidos/detalle', {
         title: `${pedido.tipo_documento} ${pedido.codigo_orden}`,
         pedido,
         detalles,
         vehiculos,
-        comision: comisiones.length > 0 ? comisiones[0] : null,
+        comision,
         userRole: usuario.rol
       });
 
@@ -268,29 +305,23 @@ const pedidosController = {
     }
   },
 
-  // Conversión Transaccional: Cotización -> Venta
+  // Conversión Transaccional: Cotización -> Venta con Sequelize Transaction
   convertirAVenta: async (req, res) => {
-    const connection = await db.getConnection();
+    const t = await sequelize.transaction();
     try {
-      await connection.beginTransaction();
-
       const { id } = req.params;
       const { vehiculo_id, metodo_pago } = req.body;
 
-      // 1. Obtener datos de la cotización y del vendedor
-      const [pedidos] = await connection.query(
-        `SELECT p.*, u.id AS vendedor_id, u.nombre AS vendedor_nombre, u.porcentaje_comision, u.activo AS vendedor_activo
-         FROM pedidos p
-         LEFT JOIN usuarios u ON p.vendedor_id = u.id
-         WHERE p.id = ? FOR UPDATE`,
-        [id]
-      );
+      // 1. Obtener datos de la cotización y del vendedor con bloqueo
+      const pedido = await Pedido.findByPk(id, {
+        include: [{ model: Usuario, as: 'vendedor' }],
+        transaction: t,
+        lock: true
+      });
 
-      if (pedidos.length === 0) {
+      if (!pedido) {
         throw new Error('Error: La cotización solicitada no existe.');
       }
-
-      const pedido = pedidos[0];
 
       if (pedido.tipo_documento === 'VENTA') {
         throw new Error(`Error: Este documento ya es una venta formal (${pedido.codigo_orden}) y no puede convertirse nuevamente.`);
@@ -305,60 +336,69 @@ const pedidosController = {
       }
 
       // 2. Obtener los detalles de la cotización con información de inventario
-      const [detalles] = await connection.query(
-        `SELECT d.*, pr.nombre AS producto_nombre, pr.existencia, pr.precio_compra 
-         FROM detalles_pedido d
-         LEFT JOIN productos pr ON d.producto_id = pr.id
-         WHERE d.pedido_id = ? FOR UPDATE`,
-        [id]
-      );
+      const detalles = await DetallePedido.findAll({
+        where: { pedido_id: id },
+        include: [{ model: Producto, as: 'producto' }],
+        transaction: t,
+        lock: true
+      });
 
-      if (detalles.length === 0) {
+      if (!detalles || detalles.length === 0) {
         throw new Error('Error: La cotización no contiene productos asociados para procesar la venta.');
       }
 
       // 3. Validar exhaustivamente stock suficiente de cada ítem ANTES de modificar inventario
       for (const item of detalles) {
-        if (!item.producto_nombre) {
+        if (!item.producto) {
           throw new Error(`Error: El producto con ID ${item.producto_id} ya no existe en el catálogo.`);
         }
 
         const cantidadRequerida = parseFloat(item.cantidad) || 0;
-        const stockDisponible = parseFloat(item.existencia) || 0;
+        const stockDisponible = parseFloat(item.producto.existencia) || 0;
 
         if (cantidadRequerida <= 0) {
-          throw new Error(`Error: La cantidad para "${item.producto_nombre}" debe ser mayor a cero.`);
+          throw new Error(`Error: La cantidad para "${item.producto.nombre}" debe ser mayor a cero.`);
         }
 
         if (stockDisponible < cantidadRequerida) {
           throw new Error(
-            `Error: Uno de los productos no tiene stock suficiente en almacén. "${item.producto_nombre}" requiere ${cantidadRequerida.toFixed(2)}, pero solo hay ${stockDisponible.toFixed(2)} disponibles.`
+            `Error: Uno de los productos no tiene stock suficiente en almacén. "${item.producto.nombre}" requiere ${cantidadRequerida.toFixed(2)}, pero solo hay ${stockDisponible.toFixed(2)} disponibles.`
           );
         }
       }
 
-      // 4. Descontar inventario y congelar el costo histórico de compra en detalles_pedido
+      // 4. Reducir existencias en bucle o decremento y fijar costo_unitario en DetallePedido
       for (const item of detalles) {
         const cantidadRequerida = parseFloat(item.cantidad) || 0;
-        const costoCompra = parseFloat(item.precio_compra) || 0;
+        const costoCompra = parseFloat(item.producto.precio_compra) || 0;
 
-        await connection.query(
-          'UPDATE productos SET existencia = existencia - ? WHERE id = ?',
-          [cantidadRequerida, item.producto_id]
-        );
+        // Reducción atómica de existencia
+        await Producto.decrement('existencia', {
+          by: cantidadRequerida,
+          where: { id: item.producto_id },
+          transaction: t
+        });
 
-        await connection.query(
-          'UPDATE detalles_pedido SET costo_unitario = ? WHERE id = ?',
-          [costoCompra, item.id]
+        // Fijar costo histórico de compra en DetallePedido
+        await DetallePedido.update(
+          { costo_unitario: costoCompra },
+          { where: { id: item.id }, transaction: t }
         );
       }
 
       // 5. Generar código consecutivo de Venta: VTA-YYYY-XXXX ordenado numéricamente
       const anio = new Date().getFullYear();
-      const [ultimasVentas] = await connection.query(
-        "SELECT codigo_orden FROM pedidos WHERE codigo_orden LIKE ? ORDER BY CAST(SUBSTRING_INDEX(codigo_orden, '-', -1) AS UNSIGNED) DESC LIMIT 1 FOR UPDATE",
-        [`VTA-${anio}-%`]
-      );
+      const ultimasVentas = await Pedido.findAll({
+        where: {
+          codigo_orden: { [Op.like]: `VTA-${anio}-%` }
+        },
+        order: [
+          [sequelize.literal(`CAST(SUBSTRING_INDEX(codigo_orden, '-', -1) AS UNSIGNED)`), 'DESC']
+        ],
+        limit: 1,
+        transaction: t,
+        lock: true
+      });
 
       let consecutivo = 1;
       if (ultimasVentas.length > 0) {
@@ -372,64 +412,56 @@ const pedidosController = {
       // EFECTIVO o TRANSFERENCIA fuerzan siempre estado = 'PAGADO'. Solo CREDITO queda 'PENDIENTE'.
       const metodoRecibido = (metodo_pago || pedido.metodo_pago || 'EFECTIVO').toString().trim().toUpperCase();
       const metodoFinal = ['EFECTIVO', 'TRANSFERENCIA', 'CREDITO'].includes(metodoRecibido) ? metodoRecibido : 'EFECTIVO';
-
-      let nuevoEstado = 'PAGADO';
-      if (metodoFinal === 'CREDITO') {
-        nuevoEstado = 'PENDIENTE';
-      } else {
-        nuevoEstado = 'PAGADO'; // EFECTIVO o TRANSFERENCIA fuerzan inequívocamente PAGADO
-      }
+      const nuevoEstado = metodoFinal === 'CREDITO' ? 'PENDIENTE' : 'PAGADO';
 
       let vehiculoIdFinal = vehiculo_id !== undefined && vehiculo_id !== '' ? vehiculo_id : pedido.vehiculo_id;
       if (vehiculoIdFinal) {
-        const [vExiste] = await connection.query('SELECT id FROM vehiculos WHERE id = ?', [vehiculoIdFinal]);
-        if (vExiste.length === 0) vehiculoIdFinal = null;
+        const vExiste = await Vehiculo.findByPk(vehiculoIdFinal, { transaction: t });
+        if (!vExiste) vehiculoIdFinal = null;
       }
 
-      await connection.query(
-        `UPDATE pedidos 
-         SET tipo_documento = 'VENTA',
-             codigo_orden = ?,
-             vehiculo_id = ?,
-             metodo_pago = ?,
-             estado = ?
-         WHERE id = ?`,
-        [
-          nuevoCodigoVenta,
-          vehiculoIdFinal,
-          metodoFinal,
-          nuevoEstado,
-          id
-        ]
+      // Actualizar el pedido en la transacción
+      await Pedido.update(
+        {
+          tipo_documento: 'VENTA',
+          codigo_orden: nuevoCodigoVenta,
+          vehiculo_id: vehiculoIdFinal,
+          metodo_pago: metodoFinal,
+          estado: nuevoEstado
+        },
+        { where: { id }, transaction: t }
       );
 
       // 7. Generar registro de comisión al vendedor en estado PENDIENTE si aplica
-      const [comisionExistente] = await connection.query(
-        'SELECT id FROM comisiones WHERE pedido_id = ? LIMIT 1',
-        [id]
-      );
+      const comisionExistente = await Comision.findOne({
+        where: { pedido_id: id },
+        transaction: t
+      });
 
-      const pctComision = parseFloat(pedido.porcentaje_comision) || 0;
-      if (comisionExistente.length === 0 && pctComision > 0) {
+      const pctComision = parseFloat(pedido.vendedor ? pedido.vendedor.porcentaje_comision : 0) || 0;
+      if (!comisionExistente && pctComision > 0) {
         const montoComision = (parseFloat(pedido.total) * pctComision) / 100;
-        const comisionId = uuidv4();
-
-        await connection.query(
-          `INSERT INTO comisiones (id, vendedor_id, pedido_id, monto, estado)
-           VALUES (?, ?, ?, ?, 'PENDIENTE')`,
-          [comisionId, pedido.vendedor_id, id, montoComision]
+        await Comision.create(
+          {
+            id: uuidv4(),
+            vendedor_id: pedido.vendedor_id,
+            pedido_id: id,
+            monto: montoComision,
+            estado: 'PENDIENTE'
+          },
+          { transaction: t }
         );
       }
 
-      await connection.commit();
+      await t.commit();
       const estadoMsg = nuevoEstado === 'PAGADO' ? 'Cobrada / Pagada' : 'Pendiente de Cobro (Crédito)';
       req.flash('success', `¡Conversión exitosa! La cotización ahora es la Venta ${nuevoCodigoVenta} (${estadoMsg}) y el inventario fue actualizado.`);
       return res.redirect(`/pedidos/ver/${id}`);
 
     } catch (error) {
-      if (connection) {
+      if (t) {
         try {
-          await connection.rollback();
+          await t.rollback();
         } catch (rbErr) {
           console.error('[Error durante rollback de conversión]:', rbErr);
         }
@@ -438,37 +470,28 @@ const pedidosController = {
       const mensaje = error.message || 'Error inesperado al procesar la conversión a venta.';
       req.flash('error', mensaje.startsWith('Error:') ? mensaje : `Error: ${mensaje}`);
       return res.redirect(`/pedidos/ver/${req.params.id}`);
-    } finally {
-      if (connection) connection.release();
     }
   },
 
   // Acción Manual de Regularización / Cobro de Venta: Marcar como PAGADO
   marcarComoCobrado: async (req, res) => {
-    const connection = await db.getConnection();
+    const t = await sequelize.transaction();
     try {
-      await connection.beginTransaction();
-
       const { id } = req.params;
       const usuario = req.session.usuario;
       const { metodo_pago } = req.body;
 
       // 1. Consultar pedido con bloqueo
-      const [pedidos] = await connection.query(
-        `SELECT p.*, u.porcentaje_comision, u.nombre AS vendedor_nombre 
-         FROM pedidos p
-         INNER JOIN usuarios u ON p.vendedor_id = u.id
-         WHERE p.id = ? FOR UPDATE`,
-        [id]
-      );
+      const pedido = await Pedido.findByPk(id, {
+        include: [{ model: Usuario, as: 'vendedor' }],
+        transaction: t,
+        lock: true
+      });
 
-      if (pedidos.length === 0) {
+      if (!pedido) {
         throw new Error('Error: La orden de venta no fue encontrada.');
       }
 
-      const pedido = pedidos[0];
-
-      // Verificación de seguridad por rol: VENDEDOR solo puede operar sobre su propia venta
       if (usuario.rol === 'VENDEDOR' && pedido.vendedor_id !== usuario.id) {
         throw new Error('Error: No tienes autorización para regularizar cobros de otros vendedores.');
       }
@@ -485,56 +508,55 @@ const pedidosController = {
         throw new Error('Error: No es posible registrar cobros sobre una orden CANCELADA.');
       }
 
-      // 2. Determinar método de cobro: si se envió 'EFECTIVO' o 'TRANSFERENCIA', actualizarlo
       let metodoFinal = pedido.metodo_pago;
       if (metodo_pago && ['EFECTIVO', 'TRANSFERENCIA', 'CREDITO'].includes(metodo_pago.toString().trim().toUpperCase())) {
         metodoFinal = metodo_pago.toString().trim().toUpperCase();
       }
 
-      // 3. Actualizar estado del pedido a PAGADO
-      await connection.query(
-        `UPDATE pedidos 
-         SET estado = 'PAGADO',
-             metodo_pago = ?
-         WHERE id = ?`,
-        [metodoFinal, id]
+      // Actualizar estado del pedido a PAGADO
+      await Pedido.update(
+        { estado: 'PAGADO', metodo_pago: metodoFinal },
+        { where: { id }, transaction: t }
       );
 
-      // 4. Verificar y actualizar la comisión vinculada en comisiones
-      const [comisiones] = await connection.query(
-        'SELECT * FROM comisiones WHERE pedido_id = ? FOR UPDATE',
-        [id]
-      );
+      // Verificar y actualizar la comisión vinculada
+      const comisionActual = await Comision.findOne({
+        where: { pedido_id: id },
+        transaction: t,
+        lock: true
+      });
 
-      const pctComision = parseFloat(pedido.porcentaje_comision) || 0;
+      const pctComision = parseFloat(pedido.vendedor ? pedido.vendedor.porcentaje_comision : 0) || 0;
       const montoEsperado = (parseFloat(pedido.total) * pctComision) / 100;
 
-      if (comisiones.length > 0) {
-        const comisionActual = comisiones[0];
+      if (comisionActual) {
         if (montoEsperado > 0 && Math.abs(parseFloat(comisionActual.monto) - montoEsperado) > 0.01) {
-          await connection.query(
-            'UPDATE comisiones SET monto = ? WHERE id = ?',
-            [montoEsperado, comisionActual.id]
+          await Comision.update(
+            { monto: montoEsperado },
+            { where: { id: comisionActual.id }, transaction: t }
           );
         }
       } else if (pctComision > 0) {
-        // Si no existía comisión creada, generarla ahora
-        const comisionId = uuidv4();
-        await connection.query(
-          `INSERT INTO comisiones (id, vendedor_id, pedido_id, monto, estado)
-           VALUES (?, ?, ?, ?, 'PENDIENTE')`,
-          [comisionId, pedido.vendedor_id, id, montoEsperado]
+        await Comision.create(
+          {
+            id: uuidv4(),
+            vendedor_id: pedido.vendedor_id,
+            pedido_id: id,
+            monto: montoEsperado,
+            estado: 'PENDIENTE'
+          },
+          { transaction: t }
         );
       }
 
-      await connection.commit();
+      await t.commit();
       req.flash('success', `¡Cobro registrado con éxito! La orden ${pedido.codigo_orden} ahora está marcada como PAGADA e impacta en los ingresos cobrados.`);
       return res.redirect(`/pedidos/ver/${id}`);
 
     } catch (error) {
-      if (connection) {
+      if (t) {
         try {
-          await connection.rollback();
+          await t.rollback();
         } catch (rbErr) {
           console.error('[Error durante rollback de cobro]:', rbErr);
         }
@@ -543,8 +565,6 @@ const pedidosController = {
       const mensaje = error.message || 'Error al procesar el cobro de la venta.';
       req.flash('error', mensaje.startsWith('Error:') || mensaje.startsWith('Aviso:') ? mensaje : `Error: ${mensaje}`);
       return res.redirect(`/pedidos/ver/${req.params.id}`);
-    } finally {
-      if (connection) connection.release();
     }
   },
 
@@ -556,27 +576,32 @@ const pedidosController = {
   listarComisiones: async (req, res) => {
     try {
       const usuario = req.session.usuario;
-      
-      let query = `
-        SELECT c.*, p.codigo_orden, p.total AS total_venta, p.creado_en AS fecha_venta,
-               u.nombre AS vendedor_nombre
-        FROM comisiones c
-        INNER JOIN pedidos p ON c.pedido_id = p.id
-        INNER JOIN usuarios u ON c.vendedor_id = u.id
-        WHERE 1=1
-      `;
-      const params = [];
+      const whereConditions = {};
 
       if (usuario.rol === 'VENDEDOR') {
-        query += ' AND c.vendedor_id = ?';
-        params.push(usuario.id);
+        whereConditions.vendedor_id = usuario.id;
       }
 
-      query += ' ORDER BY c.creado_en DESC';
+      const comisionesList = await Comision.findAll({
+        where: whereConditions,
+        include: [
+          { model: Pedido, attributes: ['codigo_orden', 'total', 'creado_en'] },
+          { model: Usuario, attributes: ['nombre'] }
+        ],
+        order: [['creado_en', 'DESC']]
+      });
 
-      const [comisiones] = await db.query(query, params);
+      const comisiones = comisionesList.map(c => {
+        const item = c.get({ plain: true });
+        return {
+          ...item,
+          codigo_orden: item.Pedido ? item.Pedido.codigo_orden : '',
+          total_venta: item.Pedido ? item.Pedido.total : 0,
+          fecha_venta: item.Pedido ? item.Pedido.creado_en : null,
+          vendedor_nombre: item.Usuario ? item.Usuario.nombre : ''
+        };
+      });
 
-      // Totales
       const totalPendiente = comisiones
         .filter(c => c.estado === 'PENDIENTE')
         .reduce((sum, c) => sum + parseFloat(c.monto), 0);
@@ -604,9 +629,9 @@ const pedidosController = {
   marcarComisionPagada: async (req, res) => {
     try {
       const { id } = req.params;
-      await db.query(
-        "UPDATE comisiones SET estado = 'PAGADO', fecha_pago = NOW() WHERE id = ?",
-        [id]
+      await Comision.update(
+        { estado: 'PAGADO', fecha_pago: new Date() },
+        { where: { id } }
       );
       req.flash('success', 'Comisión marcada como PAGADA.');
       res.redirect('/pedidos/comisiones');

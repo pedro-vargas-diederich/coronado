@@ -1,72 +1,176 @@
-const db = require('../config/database');
+const { Sequelize, Op } = require('sequelize');
+const {
+  sequelize,
+  Pedido,
+  DetallePedido,
+  Comision,
+  Gasto,
+  Vehiculo,
+  Producto,
+  Contacto,
+  Usuario
+} = require('../models');
 
 const dashboardController = {
   index: async (req, res) => {
     try {
       const usuario = req.session.usuario;
 
-      // 1. Métricas de Ventas
-      const [ventasData] = await db.query(`
-        SELECT 
-          COALESCE(SUM(CASE WHEN tipo_documento = 'VENTA' AND estado = 'PAGADO' THEN total ELSE 0 END), 0) AS ventas_cobradas,
-          COALESCE(SUM(CASE WHEN tipo_documento = 'VENTA' AND estado = 'PENDIENTE' THEN total ELSE 0 END), 0) AS ventas_por_cobrar,
-          COUNT(CASE WHEN tipo_documento = 'COTIZACION' AND estado = 'PENDIENTE' THEN 1 END) AS cotizaciones_activas,
-          COUNT(CASE WHEN tipo_documento = 'VENTA' THEN 1 END) AS total_ventas_realizadas
-        FROM pedidos
-      `);
+      // 1. Métricas de Ventas agregadas con Sequelize
+      const ventasData = await Pedido.findAll({
+        attributes: [
+          [
+            Sequelize.fn(
+              'COALESCE',
+              Sequelize.fn(
+                'SUM',
+                Sequelize.literal("CASE WHEN tipo_documento = 'VENTA' AND estado = 'PAGADO' THEN total ELSE 0 END")
+              ),
+              0
+            ),
+            'ventas_cobradas'
+          ],
+          [
+            Sequelize.fn(
+              'COALESCE',
+              Sequelize.fn(
+                'SUM',
+                Sequelize.literal("CASE WHEN tipo_documento = 'VENTA' AND estado = 'PENDIENTE' THEN total ELSE 0 END")
+              ),
+              0
+            ),
+            'ventas_por_cobrar'
+          ],
+          [
+            Sequelize.fn(
+              'COUNT',
+              Sequelize.literal("CASE WHEN tipo_documento = 'COTIZACION' AND estado = 'PENDIENTE' THEN 1 END")
+            ),
+            'cotizaciones_activas'
+          ],
+          [
+            Sequelize.fn(
+              'COUNT',
+              Sequelize.literal("CASE WHEN tipo_documento = 'VENTA' THEN 1 END")
+            ),
+            'total_ventas_realizadas'
+          ]
+        ],
+        raw: true
+      });
 
-      const ventasCobradas = parseFloat(ventasData[0].ventas_cobradas) || 0;
-      const ventasPorCobrar = parseFloat(ventasData[0].ventas_por_cobrar) || 0;
-      const cotizacionesActivas = parseInt(ventasData[0].cotizaciones_activas, 10) || 0;
-      const totalVentasRealizadas = parseInt(ventasData[0].total_ventas_realizadas, 10) || 0;
+      const metrics = ventasData[0] || {};
+      const ventasCobradas = parseFloat(metrics.ventas_cobradas) || 0;
+      const ventasPorCobrar = parseFloat(metrics.ventas_por_cobrar) || 0;
+      const cotizacionesActivas = parseInt(metrics.cotizaciones_activas, 10) || 0;
+      const totalVentasRealizadas = parseInt(metrics.total_ventas_realizadas, 10) || 0;
 
-      // 2. Costo Histórico de Mercancía Vendida (COGS) de las ventas cobradas
-      const [cogsData] = await db.query(`
-        SELECT COALESCE(SUM(d.cantidad * d.costo_unitario), 0) AS costo_mercancia
-        FROM detalles_pedido d
-        INNER JOIN pedidos p ON d.pedido_id = p.id
-        WHERE p.tipo_documento = 'VENTA' AND p.estado = 'PAGADO'
-      `);
-      const costoMercancia = parseFloat(cogsData[0].costo_mercancia) || 0;
+      // 2. Costo Histórico de Mercancía Vendida (COGS) de ventas cobradas con Sequelize Include
+      const cogsData = await DetallePedido.findAll({
+        attributes: [
+          [
+            Sequelize.fn(
+              'COALESCE',
+              Sequelize.fn('SUM', Sequelize.literal('DetallePedido.cantidad * DetallePedido.costo_unitario')),
+              0
+            ),
+            'costo_mercancia'
+          ]
+        ],
+        include: [
+          {
+            model: Pedido,
+            attributes: [],
+            where: {
+              tipo_documento: 'VENTA',
+              estado: 'PAGADO'
+            }
+          }
+        ],
+        raw: true
+      });
+      const costoMercancia = parseFloat(cogsData[0]?.costo_mercancia) || 0;
 
       // 3. Comisiones Vinculadas a Ventas Cobradas
-      const [comisionesData] = await db.query(`
-        SELECT 
-          COALESCE(SUM(c.monto), 0) AS comisiones_totales,
-          COALESCE(SUM(CASE WHEN c.estado = 'PAGADO' THEN c.monto ELSE 0 END), 0) AS comisiones_pagadas,
-          COALESCE(SUM(CASE WHEN c.estado = 'PENDIENTE' THEN c.monto ELSE 0 END), 0) AS comisiones_pendientes
-        FROM comisiones c
-        INNER JOIN pedidos p ON c.pedido_id = p.id
-        WHERE p.estado = 'PAGADO'
-      `);
-      const comisionesTotales = parseFloat(comisionesData[0].comisiones_totales) || 0;
-      const comisionesPendientes = parseFloat(comisionesData[0].comisiones_pendientes) || 0;
+      const comisionesData = await Comision.findAll({
+        attributes: [
+          [
+            Sequelize.fn('COALESCE', Sequelize.fn('SUM', Sequelize.col('Comision.monto')), 0),
+            'comisiones_totales'
+          ],
+          [
+            Sequelize.fn(
+              'COALESCE',
+              Sequelize.fn('SUM', Sequelize.literal("CASE WHEN Comision.estado = 'PAGADO' THEN Comision.monto ELSE 0 END")),
+              0
+            ),
+            'comisiones_pagadas'
+          ],
+          [
+            Sequelize.fn(
+              'COALESCE',
+              Sequelize.fn('SUM', Sequelize.literal("CASE WHEN Comision.estado = 'PENDIENTE' THEN Comision.monto ELSE 0 END")),
+              0
+            ),
+            'comisiones_pendientes'
+          ]
+        ],
+        include: [
+          {
+            model: Pedido,
+            attributes: [],
+            where: { estado: 'PAGADO' }
+          }
+        ],
+        raw: true
+      });
+      const comisionesTotales = parseFloat(comisionesData[0]?.comisiones_totales) || 0;
+      const comisionesPendientes = parseFloat(comisionesData[0]?.comisiones_pendientes) || 0;
 
       // 4. Gastos Operativos Totales y por Categoría
-      const [gastosData] = await db.query(`
-        SELECT 
-          COALESCE(SUM(monto), 0) AS total_gastos
-        FROM gastos
-      `);
-      const gastosTotales = parseFloat(gastosData[0].total_gastos) || 0;
+      const totalGastosRaw = await Gasto.sum('monto');
+      const gastosTotales = parseFloat(totalGastosRaw) || 0;
 
-      const [gastosPorCategoria] = await db.query(`
-        SELECT categoria, COALESCE(SUM(monto), 0) AS subtotal
-        FROM gastos
-        GROUP BY categoria
-        ORDER BY subtotal DESC
-      `);
+      const gastosPorCatData = await Gasto.findAll({
+        attributes: [
+          'categoria',
+          [Sequelize.fn('COALESCE', Sequelize.fn('SUM', Sequelize.col('monto')), 0), 'subtotal']
+        ],
+        group: ['categoria'],
+        order: [[Sequelize.literal('subtotal'), 'DESC']],
+        raw: true
+      });
+      const gastosPorCategoria = gastosPorCatData.map(g => ({
+        categoria: g.categoria,
+        subtotal: parseFloat(g.subtotal) || 0
+      }));
 
       // 5. Gastos Imputados a Flota de Vehículos
-      const [gastosFlota] = await db.query(`
-        SELECT v.placa, v.modelo, COALESCE(SUM(g.monto), 0) AS total_gasto_vehiculo
-        FROM vehiculos v
-        LEFT JOIN gastos g ON v.id = g.vehiculo_id
-        GROUP BY v.id, v.placa, v.modelo
-        ORDER BY total_gasto_vehiculo DESC
-      `);
+      const gastosFlotaData = await Vehiculo.findAll({
+        attributes: [
+          'id',
+          'placa',
+          'modelo',
+          [Sequelize.fn('COALESCE', Sequelize.fn('SUM', Sequelize.col('Gastos.monto')), 0), 'total_gasto_vehiculo']
+        ],
+        include: [
+          {
+            model: Gasto,
+            attributes: []
+          }
+        ],
+        group: ['Vehiculo.id', 'Vehiculo.placa', 'Vehiculo.modelo'],
+        order: [[Sequelize.literal('total_gasto_vehiculo'), 'DESC']],
+        raw: true
+      });
+      const gastosFlota = gastosFlotaData.map(v => ({
+        id: v.id,
+        placa: v.placa,
+        modelo: v.modelo,
+        total_gasto_vehiculo: parseFloat(v.total_gasto_vehiculo) || 0
+      }));
 
-      // 6. Cálculo Directivo de Utilidad Neta (Fórmula Solicitada)
+      // 6. Cálculo Directivo de Utilidad Neta
       // Utilidad Neta = Ventas Cobradas - (Costo Mercancía + Comisiones + Gastos Operativos)
       const utilidadBruta = ventasCobradas - costoMercancia;
       const egresosTotales = costoMercancia + comisionesTotales + gastosTotales;
@@ -74,24 +178,37 @@ const dashboardController = {
       const margenNeto = ventasCobradas > 0 ? (utilidadNeta / ventasCobradas) * 100 : 0;
 
       // 7. Alertas de Inventario Crítico
-      const [alertasStock] = await db.query(`
-        SELECT codigo_sku, nombre, unidad_medida, existencia, alerta_existencia_minima
-        FROM productos
-        WHERE existencia <= alerta_existencia_minima
-        ORDER BY existencia ASC
-        LIMIT 5
-      `);
+      const alertasStock = await Producto.findAll({
+        attributes: ['codigo_sku', 'nombre', 'unidad_medida', 'existencia', 'alerta_existencia_minima'],
+        where: {
+          existencia: {
+            [Op.lte]: Sequelize.col('alerta_existencia_minima')
+          }
+        },
+        order: [['existencia', 'ASC']],
+        limit: 5,
+        raw: true
+      });
 
-      // 8. Actividad Comercial Reciente
-      const [ultimosPedidos] = await db.query(`
-        SELECT p.id, p.tipo_documento, p.codigo_orden, p.total, p.estado, p.creado_en,
-               c.razon_social AS cliente_nombre, u.nombre AS vendedor_nombre
-        FROM pedidos p
-        INNER JOIN contactos c ON p.cliente_id = c.id
-        INNER JOIN usuarios u ON p.vendedor_id = u.id
-        ORDER BY p.creado_en DESC
-        LIMIT 6
-      `);
+      // 8. Actividad Comercial Reciente con Sequelize Include
+      const ultimosPedidosData = await Pedido.findAll({
+        attributes: ['id', 'tipo_documento', 'codigo_orden', 'total', 'estado', 'creado_en'],
+        include: [
+          { model: Contacto, as: 'cliente', attributes: ['razon_social'] },
+          { model: Usuario, as: 'vendedor', attributes: ['nombre'] }
+        ],
+        order: [['creado_en', 'DESC']],
+        limit: 6
+      });
+
+      const ultimosPedidos = ultimosPedidosData.map(p => {
+        const item = p.get({ plain: true });
+        return {
+          ...item,
+          cliente_nombre: item.cliente ? item.cliente.razon_social : '',
+          vendedor_nombre: item.vendedor ? item.vendedor.nombre : ''
+        };
+      });
 
       res.render('dashboard/index', {
         title: usuario.rol === 'SOCIO' ? 'Dashboard Financiero Directivo' : 'Panel de Control Operativo',
@@ -114,7 +231,7 @@ const dashboardController = {
       });
 
     } catch (error) {
-      console.error('[Error en Dashboard]:', error);
+      console.error('[Error en Dashboard con Sequelize]:', error);
       req.flash('error', 'Error al calcular los indicadores del panel.');
       res.redirect('/pedidos');
     }

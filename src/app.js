@@ -106,6 +106,17 @@ app.use((err, req, res, next) => {
   `);
 });
 
+// Sincronización automática de tablas con Sequelize en Railway y desarrollo local
+const { sequelize } = require('./models');
+
+sequelize.sync({ alter: true })
+  .then(() => {
+    console.log('[Sequelize] Modelos y tablas sincronizados exitosamente (alter: true).');
+  })
+  .catch((err) => {
+    console.error('[Sequelize Error] Error al sincronizar tablas:', err.message);
+  });
+
 // Inicialización del Servidor Web (Vinculado a 0.0.0.0 para proxy inverso de Railway)
 app.listen(PORT, HOST, () => {
   console.log('==================================================');
@@ -118,3 +129,4 @@ app.listen(PORT, HOST, () => {
 });
 
 module.exports = app;
+
