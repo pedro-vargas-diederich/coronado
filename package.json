@@ -6,7 +6,9 @@
   "scripts": {
     "start": "node src/app.js",
     "dev": "node --watch src/app.js",
-    "seed": "node scripts/seed_produccion.js"
+    "seed": "node scripts/seed_produccion.js",
+    "db:clean": "node scripts/reset_base_datos.js",
+    "db:reset": "node scripts/reset_base_datos.js"
   },
   "engines": {
     "node": ">=18.x"
