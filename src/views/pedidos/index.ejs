@@ -1,0 +1,141 @@
+<div class="space-y-6">
+  <!-- Cabecera de Página -->
+  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div>
+      <h1 class="text-2xl font-bold text-slate-900 tracking-tight">
+        <%= userRole === 'VENDEDOR' ? 'Mis Cotizaciones & Ventas' : 'Cotizaciones & Ventas' %>
+      </h1>
+      <p class="text-sm text-slate-500 font-medium">Historial comercial, pedidos cerrados y cotizaciones vigentes</p>
+    </div>
+    <div>
+      <a href="/pedidos/nuevo" class="inline-flex items-center justify-center space-x-2 h-12 px-5 bg-slate-900 hover:bg-slate-800 text-white text-sm font-semibold rounded-xl shadow-sm transition w-full sm:w-auto">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"></path>
+        </svg>
+        <span>Nueva Cotización</span>
+      </a>
+    </div>
+  </div>
+
+  <!-- Filtro por Tipo de Documento -->
+  <div class="flex items-center space-x-2 border-b border-slate-200 pb-3 overflow-x-auto text-sm">
+    <a href="/pedidos?tipo=TODOS" class="px-4 py-2 rounded-xl font-medium transition whitespace-nowrap <%= filtroTipo === 'TODOS' ? 'bg-slate-900 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100' %>">
+      Todos
+    </a>
+    <a href="/pedidos?tipo=COTIZACION" class="px-4 py-2 rounded-xl font-medium transition whitespace-nowrap <%= filtroTipo === 'COTIZACION' ? 'bg-slate-900 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100' %>">
+      Cotizaciones
+    </a>
+    <a href="/pedidos?tipo=VENTA" class="px-4 py-2 rounded-xl font-medium transition whitespace-nowrap <%= filtroTipo === 'VENTA' ? 'bg-slate-900 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100' %>">
+      Ventas Efectivas
+    </a>
+  </div>
+
+  <!-- Vista Móvil: Tarjetas (block md:hidden) -->
+  <div class="grid grid-cols-1 gap-3 md:hidden">
+    <% if (pedidos.length === 0) { %>
+      <div class="p-8 text-center bg-white rounded-2xl border border-slate-200 text-slate-500 text-sm">
+        No hay registros comerciales para mostrar.
+      </div>
+    <% } %>
+
+    <% pedidos.forEach(function(item) { %>
+      <a href="/pedidos/ver/<%= item.id %>" class="block bg-white border border-slate-200 rounded-2xl p-4 shadow-sm hover:border-slate-300 transition space-y-3">
+        <div class="flex items-start justify-between">
+          <div>
+            <div class="flex items-center space-x-2">
+              <span class="inline-block px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded-md <%= item.tipo_documento === 'VENTA' ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-800' %>">
+                <%= item.tipo_documento %>
+              </span>
+              <span class="font-mono text-xs font-bold text-slate-900"><%= item.codigo_orden %></span>
+            </div>
+            <h2 class="text-base font-bold text-slate-900 mt-1 leading-snug"><%= item.cliente_nombre %></h2>
+          </div>
+          <span class="text-xs font-semibold px-2 py-0.5 rounded-full border <%= item.estado === 'PAGADO' ? 'bg-emerald-50 text-emerald-800 border-emerald-200' : (item.estado === 'PENDIENTE' ? 'bg-amber-50 text-amber-800 border-amber-200' : 'bg-slate-100 text-slate-700 border-slate-200') %>">
+            <%= item.estado %>
+          </span>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2 pt-2 border-t border-slate-100 text-xs text-slate-600">
+          <div>
+            <p class="text-slate-500">Fecha:</p>
+            <p class="font-medium text-slate-900"><%= formatDate(item.creado_en) %></p>
+            <% if (item.vehiculo_placa) { %>
+              <p class="text-[11px] text-slate-500 mt-1">🚚 Placa: <span class="font-semibold text-slate-800"><%= item.vehiculo_placa %></span></p>
+            <% } %>
+          </div>
+          <div class="text-right">
+            <p class="text-slate-500">Total:</p>
+            <p class="text-base font-bold text-slate-900"><%= formatMoney(item.total) %></p>
+            <p class="text-[11px] text-slate-500 mt-1"><%= item.metodo_pago %></p>
+          </div>
+        </div>
+
+        <% if (userRole !== 'VENDEDOR') { %>
+          <div class="pt-2 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+            <span>Vendedor:</span>
+            <span class="font-semibold text-slate-800"><%= item.vendedor_nombre %></span>
+          </div>
+        <% } %>
+      </a>
+    <% }); %>
+  </div>
+
+  <!-- Vista Escritorio: Tabla Completa (hidden md:table) -->
+  <div class="hidden md:block bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+    <div class="overflow-x-auto">
+      <table class="w-full text-left border-collapse text-sm">
+        <thead>
+          <tr class="bg-slate-50/80 border-b border-slate-200 text-xs font-bold text-slate-600 uppercase tracking-wider">
+            <th class="py-3.5 px-4">Tipo</th>
+            <th class="py-3.5 px-4">Código</th>
+            <th class="py-3.5 px-4">Cliente</th>
+            <% if (userRole !== 'VENDEDOR') { %>
+              <th class="py-3.5 px-4">Vendedor</th>
+            <% } %>
+            <th class="py-3.5 px-4">Fecha</th>
+            <th class="py-3.5 px-4">Método Pago</th>
+            <th class="py-3.5 px-4 text-center">Estado</th>
+            <th class="py-3.5 px-4 text-right">Total</th>
+            <th class="py-3.5 px-4 text-center">Acciones</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+          <% if (pedidos.length === 0) { %>
+            <tr>
+              <td colspan="9" class="py-8 text-center text-slate-500">No hay documentos registrados.</td>
+            </tr>
+          <% } %>
+
+          <% pedidos.forEach(function(item) { %>
+            <tr class="hover:bg-slate-50/60 transition">
+              <td class="py-3.5 px-4">
+                <span class="inline-block px-2.5 py-0.5 rounded text-xs font-bold <%= item.tipo_documento === 'VENTA' ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-800' %>">
+                  <%= item.tipo_documento %>
+                </span>
+              </td>
+              <td class="py-3.5 px-4 font-mono font-bold text-slate-900"><%= item.codigo_orden %></td>
+              <td class="py-3.5 px-4 font-semibold text-slate-900"><%= item.cliente_nombre %></td>
+              <% if (userRole !== 'VENDEDOR') { %>
+                <td class="py-3.5 px-4 text-slate-600"><%= item.vendedor_nombre %></td>
+              <% } %>
+              <td class="py-3.5 px-4 text-slate-600"><%= formatDate(item.creado_en) %></td>
+              <td class="py-3.5 px-4 text-slate-600"><%= item.metodo_pago %></td>
+              <td class="py-3.5 px-4 text-center">
+                <span class="inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold <%= item.estado === 'PAGADO' ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' : (item.estado === 'PENDIENTE' ? 'bg-amber-50 text-amber-800 border border-amber-200' : 'bg-slate-100 text-slate-700 border border-slate-200') %>">
+                  <%= item.estado %>
+                </span>
+              </td>
+              <td class="py-3.5 px-4 text-right font-bold text-slate-900"><%= formatMoney(item.total) %></td>
+              <td class="py-3.5 px-4 text-center">
+                <a href="/pedidos/ver/<%= item.id %>" class="inline-flex items-center space-x-1 text-slate-600 hover:text-slate-900 font-semibold text-xs px-2.5 py-1 rounded hover:bg-slate-100 transition">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
+                  <span>Ver Detalle</span>
+                </a>
+              </td>
+            </tr>
+          <% }); %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>

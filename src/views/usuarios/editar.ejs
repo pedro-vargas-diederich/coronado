@@ -1,0 +1,184 @@
+<div class="max-w-2xl mx-auto space-y-6">
+  <!-- Cabecera -->
+  <div class="flex items-center justify-between">
+    <div>
+      <h1 class="text-2xl font-bold text-slate-900 tracking-tight">Editar Usuario</h1>
+      <p class="text-sm text-slate-500 font-medium">Modificación de credenciales, nivel de permisos y comisiones</p>
+    </div>
+    <a href="/usuarios" class="inline-flex items-center space-x-1 text-sm font-semibold text-slate-600 hover:text-slate-900">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+      <span>Volver</span>
+    </a>
+  </div>
+
+  <div class="bg-white border border-slate-200 rounded-2xl p-5 sm:p-8 shadow-sm">
+    <form action="<%= accion %>" method="POST" id="form-editar-usuario" class="space-y-6">
+      
+      <!-- Nombre Completo -->
+      <div>
+        <label for="nombre" class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
+          Nombre Completo y Apellidos *
+        </label>
+        <input 
+          type="text" 
+          id="nombre" 
+          name="nombre" 
+          required 
+          value="<%= usuario.nombre %>"
+          placeholder="Ej. Juan Sebastián Morales" 
+          class="w-full h-14 px-4 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 placeholder-slate-400 focus:bg-white focus:ring-2 focus:ring-slate-900 focus:outline-none text-base transition"
+        >
+      </div>
+
+      <!-- Correo Electrónico -->
+      <div>
+        <label for="correo" class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
+          Correo Electrónico Institucional *
+        </label>
+        <input 
+          type="email" 
+          id="correo" 
+          name="correo" 
+          required 
+          value="<%= usuario.correo %>"
+          placeholder="ejemplo@distribuidora.com" 
+          class="w-full h-14 px-4 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 placeholder-slate-400 focus:bg-white focus:ring-2 focus:ring-slate-900 focus:outline-none text-base transition"
+        >
+      </div>
+
+      <!-- Nueva Contraseña (Opcional) -->
+      <div>
+        <div class="flex items-center justify-between mb-1.5">
+          <label for="nueva_clave" class="block text-xs font-bold uppercase tracking-wider text-slate-700">
+            Nueva Contraseña (Opcional)
+          </label>
+          <span class="text-[11px] text-slate-400 font-medium">Dejar en blanco para conservar la actual</span>
+        </div>
+        <input 
+          type="password" 
+          id="nueva_clave" 
+          name="nueva_clave" 
+          placeholder="•••••••••••• (dejar en blanco para mantener la actual)" 
+          class="w-full h-14 px-4 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 placeholder-slate-400 focus:bg-white focus:ring-2 focus:ring-slate-900 focus:outline-none text-base transition"
+        >
+        <p class="text-xs text-slate-500 mt-1">
+          Solo diligencia este campo si deseas cambiar la clave de acceso. Se cifrará con bcrypt.
+        </p>
+      </div>
+
+      <!-- Rol Asignado -->
+      <div>
+        <label for="rol" class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
+          Rol de Acceso en el Sistema *
+        </label>
+        
+        <% if (usuario.id === currentUserId) { %>
+          <input type="hidden" name="rol" value="SOCIO">
+          <div class="p-4 rounded-xl border border-slate-200 bg-slate-100 text-slate-800 text-sm flex items-center justify-between">
+            <div>
+              <span class="font-bold">SOCIO DIRECTIVO (Tu cuenta activa)</span>
+              <p class="text-xs text-slate-500 mt-0.5">Por seguridad no puedes cambiar tu propio rol desde tu sesión.</p>
+            </div>
+            <span class="px-2.5 py-0.5 rounded text-xs font-bold bg-purple-100 text-purple-800">SOCIO</span>
+          </div>
+        <% } else { %>
+          <select 
+            id="rol" 
+            name="rol" 
+            required 
+            class="w-full h-14 px-4 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 focus:bg-white focus:ring-2 focus:ring-slate-900 focus:outline-none text-base transition"
+          >
+            <option value="VENDEDOR" <%= usuario.rol === 'VENDEDOR' ? 'selected' : '' %>>VENDEDOR (Cotizador en vivo, clientes propios y sus comisiones)</option>
+            <option value="ADMINISTRADOR" <%= usuario.rol === 'ADMINISTRADOR' ? 'selected' : '' %>>ADMINISTRADOR (Operaciones, inventario, flota y gastos)</option>
+            <option value="SOCIO" <%= usuario.rol === 'SOCIO' ? 'selected' : '' %>>SOCIO DIRECTIVO (Dashboard directivo, balance financiero y usuarios)</option>
+          </select>
+        <% } %>
+      </div>
+
+      <!-- Porcentaje de Comisión (Condicional para VENDEDOR) -->
+      <div id="contenedor-comision" class="p-4 rounded-xl border border-slate-200 bg-slate-50 transition space-y-2 <%= usuario.rol === 'VENDEDOR' ? '' : 'hidden' %>">
+        <div class="flex items-center justify-between">
+          <label for="porcentaje_comision" class="block text-xs font-bold uppercase tracking-wider text-slate-800">
+            Porcentaje de Comisión (%) <span class="text-amber-700 font-extrabold">* Obligatorio para Vendedor</span>
+          </label>
+          <span class="text-[11px] text-slate-500 font-medium">Liquidación sobre Ventas</span>
+        </div>
+
+        <input 
+          type="number" 
+          step="0.01" 
+          min="0" 
+          max="100" 
+          id="porcentaje_comision" 
+          name="porcentaje_comision" 
+          value="<%= usuario.rol === 'VENDEDOR' ? Number(usuario.porcentaje_comision).toFixed(2) : '0.00' %>"
+          placeholder="Ej. 3.50" 
+          class="w-full h-14 px-4 bg-white border border-slate-300 rounded-xl text-slate-900 focus:ring-2 focus:ring-slate-900 focus:outline-none text-base"
+        >
+
+        <p class="text-xs text-slate-500">
+          Si el rol se cambia a Administrador o Socio, este valor se restablece automáticamente a 0.00%.
+        </p>
+      </div>
+
+      <!-- Estado de la Cuenta (Activo / Inactivo) -->
+      <div>
+        <label for="activo" class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
+          Estado de Acceso de la Cuenta *
+        </label>
+        
+        <% if (usuario.id === currentUserId) { %>
+          <input type="hidden" name="activo" value="1">
+          <div class="p-3.5 rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-900 text-xs font-semibold flex items-center justify-between">
+            <span>✅ Cuenta Activa (No puedes desactivar tu propia sesión activa).</span>
+            <span class="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 font-bold">ACTIVO</span>
+          </div>
+        <% } else { %>
+          <select 
+            id="activo" 
+            name="activo" 
+            class="w-full h-14 px-4 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 focus:bg-white focus:ring-2 focus:ring-slate-900 focus:outline-none text-base transition"
+          >
+            <option value="1" <%= usuario.activo ? 'selected' : '' %>>Activo (Acceso permitido al sistema)</option>
+            <option value="0" <%= !usuario.activo ? 'selected' : '' %>>Inactivo (Acceso revocado / Bloqueado)</option>
+          </select>
+        <% } %>
+      </div>
+
+      <!-- Botones de Acción -->
+      <div class="pt-4 border-t border-slate-100 flex flex-col-reverse sm:flex-row sm:justify-end gap-3">
+        <a href="/usuarios" class="h-14 px-6 inline-flex items-center justify-center rounded-xl border border-slate-300 text-slate-700 hover:bg-slate-50 font-semibold text-sm transition">
+          Cancelar
+        </a>
+        <button type="submit" class="h-14 px-8 inline-flex items-center justify-center rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-sm shadow-md transition">
+          Guardar Cambios
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+  const rolSelect = document.getElementById('rol');
+  const comisionContainer = document.getElementById('contenedor-comision');
+  const comisionInput = document.getElementById('porcentaje_comision');
+
+  function toggleComisionField() {
+    if (!rolSelect) return;
+    if (rolSelect.value === 'VENDEDOR') {
+      comisionContainer.classList.remove('hidden');
+      comisionInput.required = true;
+      if (!comisionInput.value || parseFloat(comisionInput.value) === 0) {
+        comisionInput.value = '3.00';
+      }
+    } else {
+      comisionContainer.classList.add('hidden');
+      comisionInput.required = false;
+      comisionInput.value = '0.00';
+    }
+  }
+
+  if (rolSelect) {
+    rolSelect.addEventListener('change', toggleComisionField);
+  }
+</script>

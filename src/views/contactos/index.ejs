@@ -1,0 +1,129 @@
+<div class="space-y-6">
+  <!-- Cabecera de Página -->
+  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div>
+      <h1 class="text-2xl font-bold text-slate-900 tracking-tight">
+        <%= userRole === 'VENDEDOR' ? 'Mis Clientes' : 'Clientes & Proveedores' %>
+      </h1>
+      <p class="text-sm text-slate-500 font-medium">Gestión de cartera comercial y aliados logísticos</p>
+    </div>
+    <div>
+      <a href="/contactos/nuevo" class="inline-flex items-center justify-center space-x-2 h-12 px-5 bg-slate-900 hover:bg-slate-800 text-white text-sm font-semibold rounded-xl shadow-sm transition w-full sm:w-auto">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"></path>
+        </svg>
+        <span><%= userRole === 'VENDEDOR' ? 'Nuevo Cliente' : 'Nuevo Contacto' %></span>
+      </a>
+    </div>
+  </div>
+
+  <!-- Filtro por Tipo de Contacto (Solo para Admin y Socio) -->
+  <% if (userRole !== 'VENDEDOR') { %>
+    <div class="flex items-center space-x-2 border-b border-slate-200 pb-3 overflow-x-auto text-sm">
+      <a href="/contactos?tipo=TODOS" class="px-4 py-2 rounded-xl font-medium transition whitespace-nowrap <%= filtroTipo === 'TODOS' ? 'bg-slate-900 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100' %>">
+        Todos
+      </a>
+      <a href="/contactos?tipo=CLIENTE" class="px-4 py-2 rounded-xl font-medium transition whitespace-nowrap <%= filtroTipo === 'CLIENTE' ? 'bg-slate-900 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100' %>">
+        Clientes
+      </a>
+      <a href="/contactos?tipo=PROVEEDOR" class="px-4 py-2 rounded-xl font-medium transition whitespace-nowrap <%= filtroTipo === 'PROVEEDOR' ? 'bg-slate-900 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100' %>">
+        Proveedores
+      </a>
+    </div>
+  <% } %>
+
+  <!-- Vista Móvil: Tarjetas (block md:hidden) -->
+  <div class="grid grid-cols-1 gap-3 md:hidden">
+    <% if (contactos.length === 0) { %>
+      <div class="p-8 text-center bg-white rounded-2xl border border-slate-200 text-slate-500 text-sm">
+        No se encontraron contactos registrados.
+      </div>
+    <% } %>
+
+    <% contactos.forEach(function(item) { %>
+      <div class="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm space-y-3">
+        <div class="flex items-start justify-between">
+          <div>
+            <span class="inline-block px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded-md <%= item.tipo === 'CLIENTE' ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' : (item.tipo === 'PROVEEDOR' ? 'bg-blue-50 text-blue-800 border border-blue-200' : 'bg-purple-50 text-purple-800 border border-purple-200') %>">
+              <%= item.tipo %>
+            </span>
+            <h2 class="text-base font-bold text-slate-900 mt-1 leading-snug"><%= item.razon_social %></h2>
+            <p class="text-xs text-slate-500 font-mono mt-0.5"><%= item.identificacion_fiscal %></p>
+          </div>
+          <a href="/contactos/editar/<%= item.id %>" class="p-2 text-slate-400 hover:text-slate-700">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+          </a>
+        </div>
+
+        <div class="space-y-1 text-xs text-slate-600 pt-2 border-t border-slate-100">
+          <% if (item.telefono) { %>
+            <p class="flex items-center space-x-2">
+              <svg class="w-3.5 h-3.5 text-slate-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"></path></svg>
+              <span><%= item.telefono %></span>
+            </p>
+          <% } %>
+          <% if (item.correo) { %>
+            <p class="flex items-center space-x-2">
+              <svg class="w-3.5 h-3.5 text-slate-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+              <span><%= item.correo %></span>
+            </p>
+          <% } %>
+          <% if (item.tipo !== 'PROVEEDOR') { %>
+            <div class="pt-2 flex justify-between items-center text-slate-700">
+              <span class="font-medium text-slate-500">Límite de Crédito:</span>
+              <span class="font-bold text-slate-900"><%= formatMoney(item.limite_credito) %></span>
+            </div>
+          <% } %>
+        </div>
+      </div>
+    <% }); %>
+  </div>
+
+  <!-- Vista Escritorio: Tabla (hidden md:table) -->
+  <div class="hidden md:block bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+    <div class="overflow-x-auto">
+      <table class="w-full text-left border-collapse text-sm">
+        <thead>
+          <tr class="bg-slate-50/80 border-b border-slate-200 text-xs font-bold text-slate-600 uppercase tracking-wider">
+            <th class="py-3.5 px-4">Tipo</th>
+            <th class="py-3.5 px-4">Razón Social / Nombre</th>
+            <th class="py-3.5 px-4">NIT / Identificación</th>
+            <th class="py-3.5 px-4">Teléfono</th>
+            <th class="py-3.5 px-4">Correo</th>
+            <th class="py-3.5 px-4 text-right">Límite Crédito</th>
+            <th class="py-3.5 px-4 text-center">Acciones</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+          <% if (contactos.length === 0) { %>
+            <tr>
+              <td colspan="7" class="py-8 text-center text-slate-500">No hay contactos para mostrar.</td>
+            </tr>
+          <% } %>
+
+          <% contactos.forEach(function(item) { %>
+            <tr class="hover:bg-slate-50/60 transition">
+              <td class="py-3.5 px-4">
+                <span class="inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold <%= item.tipo === 'CLIENTE' ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' : (item.tipo === 'PROVEEDOR' ? 'bg-blue-50 text-blue-800 border border-blue-200' : 'bg-purple-50 text-purple-800 border border-purple-200') %>">
+                  <%= item.tipo %>
+                </span>
+              </td>
+              <td class="py-3.5 px-4 font-bold text-slate-900"><%= item.razon_social %></td>
+              <td class="py-3.5 px-4 font-mono text-slate-700"><%= item.identificacion_fiscal %></td>
+              <td class="py-3.5 px-4 text-slate-600"><%= item.telefono || '-' %></td>
+              <td class="py-3.5 px-4 text-slate-600"><%= item.correo || '-' %></td>
+              <td class="py-3.5 px-4 text-right font-semibold text-slate-900">
+                <%= item.tipo !== 'PROVEEDOR' ? formatMoney(item.limite_credito) : '-' %>
+              </td>
+              <td class="py-3.5 px-4 text-center">
+                <a href="/contactos/editar/<%= item.id %>" class="text-slate-600 hover:text-slate-900 font-semibold text-xs px-2.5 py-1 rounded hover:bg-slate-100 transition">
+                  Editar
+                </a>
+              </td>
+            </tr>
+          <% }); %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>

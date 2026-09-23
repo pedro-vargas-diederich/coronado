@@ -1,0 +1,147 @@
+<div id="tracker-container" data-vehiculo-id="<%= vehiculo.id %>" class="max-w-xl mx-auto space-y-5 px-1 sm:px-0">
+
+  <!-- Cabecera Superior Minimalista -->
+  <div class="flex items-center justify-between">
+    <a href="/vehiculos" class="inline-flex items-center space-x-1.5 text-xs font-bold text-slate-500 hover:text-slate-900 transition">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+      </svg>
+      <span>Volver a Flota</span>
+    </a>
+    
+    <div id="txt-wakelock" class="text-[11px] font-medium text-slate-400 flex items-center justify-center space-x-1">
+      <span>Pantalla en espera</span>
+    </div>
+  </div>
+
+  <!-- Banner de Error / Alerta (Oculto por defecto) -->
+  <div id="banner-alerta" class="hidden rounded-2xl p-4 border text-sm font-semibold flex items-start space-x-3 transition">
+    <svg class="w-5 h-5 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+    </svg>
+    <div class="flex-1">
+      <span id="txt-alerta-mensaje">Señal GPS no disponible.</span>
+    </div>
+  </div>
+
+  <!-- Tarjeta Principal del Vehículo -->
+  <div class="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm space-y-5 text-center sm:text-left">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-4 border-b border-slate-100">
+      <div class="flex items-center space-x-3">
+        <div class="w-12 h-12 rounded-2xl bg-slate-900 text-white flex items-center justify-center font-black text-xl shadow-md">
+          🚛
+        </div>
+        <div>
+          <div class="flex items-center space-x-2">
+            <h1 class="text-2xl font-black font-mono tracking-tight text-slate-900"><%= vehiculo.placa %></h1>
+            <span id="badge-estado" class="px-2.5 py-0.5 text-xs font-bold uppercase tracking-wider rounded-lg bg-slate-100 text-slate-700">
+              DETENIDO
+            </span>
+          </div>
+          <p class="text-xs text-slate-500 font-medium"><%= vehiculo.modelo %></p>
+        </div>
+      </div>
+
+      <!-- Selector para cambiar de unidad en la tablet -->
+      <% if (otrosVehiculos && otrosVehiculos.length > 1) { %>
+        <div class="sm:text-right">
+          <label for="cambio-unidad" class="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Cambiar Unidad:</label>
+          <select 
+            id="cambio-unidad" 
+            onchange="if(this.value) window.location.href='/vehiculos/' + this.value + '/gps-tracker'"
+            class="h-10 px-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-900 transition"
+          >
+            <% otrosVehiculos.forEach(function(item) { %>
+              <option value="<%= item.id %>" <%= item.id === vehiculo.id ? 'selected' : '' %>>
+                <%= item.placa %> (<%= item.conductor_asignado %>)
+              </option>
+            <% }); %>
+          </select>
+        </div>
+      <% } %>
+    </div>
+
+    <!-- Chofer Asignado -->
+    <div class="flex items-center justify-between text-xs text-slate-600 bg-slate-50 p-3.5 rounded-xl border border-slate-100">
+      <span>Conductor en Cabina:</span>
+      <span class="font-extrabold text-slate-900"><%= vehiculo.conductor_asignado %></span>
+    </div>
+
+    <!-- BOTÓN GIGANTE DE TOQUE AMPLIO PARA LA TABLET -->
+    <div>
+      <button 
+        type="button" 
+        id="btn-toggle-rastreo"
+        class="w-full h-16 sm:h-20 bg-slate-900 hover:bg-slate-800 active:bg-slate-950 text-white font-extrabold text-base sm:text-lg rounded-2xl shadow-lg shadow-slate-900/20 transition flex items-center justify-center space-x-2"
+      >
+        <svg class="w-6 h-6 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path>
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+        </svg>
+        <span>INICIAR RASTREO</span>
+      </button>
+      <p class="text-[11px] text-slate-400 text-center mt-2">
+        La tablet solicitará permiso de ubicación y mantendrá la transmisión activa cada 30s.
+      </p>
+    </div>
+
+    <!-- Panel de Telemetría en Vivo -->
+    <div class="grid grid-cols-2 gap-3 pt-2">
+      <!-- Velocidad -->
+      <div class="bg-slate-50 border border-slate-200/80 rounded-2xl p-4 text-center">
+        <p class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Velocidad</p>
+        <div class="mt-1 flex items-baseline justify-center space-x-1">
+          <span id="txt-velocidad" class="text-3xl font-black font-mono text-slate-900">0.0</span>
+          <span class="text-xs font-bold text-slate-500">km/h</span>
+        </div>
+      </div>
+
+      <!-- Precisión Satelital -->
+      <div class="bg-slate-50 border border-slate-200/80 rounded-2xl p-4 text-center">
+        <p class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Precisión GPS</p>
+        <div class="mt-1 flex items-baseline justify-center space-x-1">
+          <span id="txt-precision" class="text-2xl font-black font-mono text-slate-900">--</span>
+        </div>
+      </div>
+
+      <!-- Latitud -->
+      <div class="bg-slate-50 border border-slate-200/80 rounded-2xl p-3 text-center">
+        <p class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Latitud</p>
+        <p id="txt-latitud" class="text-sm font-mono font-bold text-slate-800 mt-0.5">--.------</p>
+      </div>
+
+      <!-- Longitud -->
+      <div class="bg-slate-50 border border-slate-200/80 rounded-2xl p-3 text-center">
+        <p class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Longitud</p>
+        <p id="txt-longitud" class="text-sm font-mono font-bold text-slate-800 mt-0.5">--.------</p>
+      </div>
+    </div>
+
+    <!-- Barra de Estado de Transmisión y Forzado Manual -->
+    <div class="pt-2 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500">
+      <div class="flex items-center space-x-2">
+        <span id="indicador-pulso" class="w-3 h-3 rounded-full bg-slate-300 transition-all duration-300"></span>
+        <span>Último envío: <strong id="txt-ultimo-envio" class="text-slate-800 font-mono font-bold">Nunca</strong></span>
+        <span class="text-slate-300">|</span>
+        <span>Total: <strong id="txt-total-envios" class="text-slate-800 font-bold">0</strong></span>
+      </div>
+
+      <div class="flex items-center space-x-2 w-full sm:w-auto">
+        <span class="text-[11px] text-slate-400">Próximo en: <strong id="txt-proximo-envio" class="text-slate-700 font-mono">--</strong></span>
+        <button 
+          type="button" 
+          id="btn-forzar-envio" 
+          disabled 
+          class="opacity-50 cursor-not-allowed h-10 px-3.5 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs rounded-xl transition flex-1 sm:flex-initial"
+        >
+          Enviar Ahora
+        </button>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+<!-- Script del Tracker de Geolocalización -->
+<script src="/js/gps-tracker.js"></script>

@@ -1,0 +1,301 @@
+<div class="space-y-6">
+  
+  <!-- Encabezado del Dashboard -->
+  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div>
+      <div class="flex items-center space-x-2">
+        <h1 class="text-2xl font-bold text-slate-900 tracking-tight">
+          <%= userRole === 'SOCIO' ? 'Dashboard Financiero Directivo' : 'Panel de Control Operativo' %>
+        </h1>
+        <span class="px-2.5 py-0.5 rounded-full text-xs font-bold <%= userRole === 'SOCIO' ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800' %>">
+          <%= userRole %>
+        </span>
+      </div>
+      <p class="text-sm text-slate-500 font-medium">Balance en tiempo real, márgenes netos y estado del inventario</p>
+    </div>
+
+    <!-- Acciones Rápidas -->
+    <div class="flex items-center gap-2">
+      <a href="/pedidos/nuevo" class="h-11 px-4 inline-flex items-center space-x-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs shadow-sm transition">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+        <span>Cotizar</span>
+      </a>
+      <a href="/gastos/nuevo" class="h-11 px-4 inline-flex items-center space-x-1.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-800 font-bold text-xs shadow-sm transition">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+        <span>Registrar Gasto</span>
+      </a>
+    </div>
+  </div>
+
+  <% if (userRole === 'SOCIO') { %>
+    <!-- ========================================== -->
+    <!-- SECCIÓN EXCLUSIVA SOCIO: BALANCE FINANCIERO -->
+    <!-- ========================================== -->
+
+    <!-- Tarjeta Principal Hero: Utilidad Neta en Tiempo Real -->
+    <div class="bg-slate-900 text-white rounded-3xl p-6 sm:p-8 shadow-xl relative overflow-hidden">
+      <div class="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+        <div>
+          <div class="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-slate-800 border border-slate-700 text-xs font-semibold text-emerald-400 mb-3">
+            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+            <span>Utilidad Neta Realtime</span>
+          </div>
+          <p class="text-xs uppercase tracking-widest text-slate-400 font-bold">Margen de Ganancia Consolidado</p>
+          <div class="flex items-baseline space-x-3 mt-1">
+            <h2 class="text-3xl sm:text-5xl font-black tracking-tight <%= utilidadNeta >= 0 ? 'text-white' : 'text-rose-400' %>">
+              <%= formatMoney(utilidadNeta) %>
+            </h2>
+            <span class="text-sm sm:text-base font-bold px-2.5 py-1 rounded-lg <%= utilidadNeta >= 0 ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-rose-500/20 text-rose-400 border border-rose-500/30' %>">
+              <%= margenNeto.toFixed(1) %>% Margen Neto
+            </span>
+          </div>
+          <p class="text-xs text-slate-400 mt-2 font-medium">
+            Calculado sobre <strong class="text-slate-200"><%= formatMoney(ventasCobradas) %></strong> en ventas efectivamente cobradas.
+          </p>
+        </div>
+
+        <!-- Ecuación Financiera Visible -->
+        <div class="bg-slate-800/80 backdrop-blur rounded-2xl p-4 border border-slate-700 text-xs space-y-2 max-w-sm">
+          <p class="font-bold text-slate-300 uppercase tracking-wider text-[10px]">Fórmula Directiva:</p>
+          <div class="font-mono text-slate-300 space-y-1 text-[11px]">
+            <div class="flex justify-between">
+              <span>(+) Ventas Cobradas:</span>
+              <span class="text-emerald-400 font-bold"><%= formatMoney(ventasCobradas) %></span>
+            </div>
+            <div class="flex justify-between">
+              <span>(-) Costo Mercancía:</span>
+              <span class="text-rose-300"><%= formatMoney(costoMercancia) %></span>
+            </div>
+            <div class="flex justify-between">
+              <span>(-) Comisiones Venta:</span>
+              <span class="text-rose-300"><%= formatMoney(comisionesTotales) %></span>
+            </div>
+            <div class="flex justify-between">
+              <span>(-) Gastos Operativos:</span>
+              <span class="text-rose-300"><%= formatMoney(gastosTotales) %></span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Cuadrícula de Métricas Financieras Desglosadas -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      
+      <!-- Ventas Cobradas -->
+      <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-2">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Ventas Cobradas</span>
+          <span class="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center font-bold text-xs">
+            Bs
+          </span>
+        </div>
+        <p class="text-2xl font-black text-slate-900"><%= formatMoney(ventasCobradas) %></p>
+        <div class="flex items-center justify-between text-xs text-slate-500 pt-1 border-t border-slate-100">
+          <span>Por cobrar a crédito:</span>
+          <span class="font-semibold text-amber-700"><%= formatMoney(ventasPorCobrar) %></span>
+        </div>
+      </div>
+
+      <!-- Costo de Mercancía (COGS) -->
+      <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-2">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Costo Mercancía</span>
+          <span class="w-8 h-8 rounded-lg bg-slate-100 text-slate-700 flex items-center justify-center font-bold text-xs">
+            📦
+          </span>
+        </div>
+        <p class="text-2xl font-black text-slate-900"><%= formatMoney(costoMercancia) %></p>
+        <div class="flex items-center justify-between text-xs text-slate-500 pt-1 border-t border-slate-100">
+          <span>Utilidad Bruta:</span>
+          <span class="font-bold text-slate-900"><%= formatMoney(utilidadBruta) %></span>
+        </div>
+      </div>
+
+      <!-- Gastos Operativos -->
+      <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-2">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Gastos Operativos</span>
+          <span class="w-8 h-8 rounded-lg bg-rose-50 text-rose-700 flex items-center justify-center font-bold text-xs">
+            📉
+          </span>
+        </div>
+        <p class="text-2xl font-black text-rose-700"><%= formatMoney(gastosTotales) %></p>
+        <div class="flex items-center justify-between text-xs text-slate-500 pt-1 border-t border-slate-100">
+          <span>Combustible & Alquiler:</span>
+          <span class="font-semibold text-slate-800">Ver centro de costos</span>
+        </div>
+      </div>
+
+      <!-- Comisiones Comerciales -->
+      <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-2">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Comisiones Venta</span>
+          <span class="w-8 h-8 rounded-lg bg-amber-50 text-amber-700 flex items-center justify-center font-bold text-xs">
+            %
+          </span>
+        </div>
+        <p class="text-2xl font-black text-slate-900"><%= formatMoney(comisionesTotales) %></p>
+        <div class="flex items-center justify-between text-xs text-slate-500 pt-1 border-t border-slate-100">
+          <span>Pendientes por pagar:</span>
+          <span class="font-semibold text-amber-700"><%= formatMoney(comisionesPendientes) %></span>
+        </div>
+      </div>
+
+    </div>
+
+  <% } else { %>
+    <!-- ============================================== -->
+    <!-- SECCIÓN OPERATIVA (ADMINISTRADOR) -->
+    <!-- ============================================== -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-2">
+        <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Ventas Facturadas</span>
+        <p class="text-2xl font-black text-slate-900"><%= totalVentasRealizadas %></p>
+        <p class="text-xs text-slate-500">Pedidos cerrados en firme</p>
+      </div>
+
+      <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-2">
+        <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Cotizaciones Abiertas</span>
+        <p class="text-2xl font-black text-slate-900"><%= cotizacionesActivas %></p>
+        <p class="text-xs text-slate-500">En negociación / seguimiento</p>
+      </div>
+
+      <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-2">
+        <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Gastos Registrados</span>
+        <p class="text-2xl font-black text-rose-700"><%= formatMoney(gastosTotales) %></p>
+        <p class="text-xs text-slate-500">Egresos operativos en curso</p>
+      </div>
+
+      <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-2">
+        <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Alertas de Stock</span>
+        <p class="text-2xl font-black <%= alertasStock.length > 0 ? 'text-amber-700' : 'text-emerald-700' %>">
+          <%= alertasStock.length %>
+        </p>
+        <p class="text-xs text-slate-500">Materiales bajo nivel mínimo</p>
+      </div>
+    </div>
+  <% } %>
+
+  <!-- Paneles Secundarios: Distribución de Gastos y Flota / Alertas de Stock -->
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    
+    <!-- Centro de Costos de Gastos Operativos y Flota -->
+    <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+        <h2 class="text-base font-bold text-slate-900">Centro de Costos Operativos</h2>
+        <a href="/gastos" class="text-xs font-semibold text-slate-600 hover:text-slate-900">Ver todos →</a>
+      </div>
+
+      <div class="space-y-4">
+        <!-- Gastos por Categoría -->
+        <div>
+          <p class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Desglose por Categoría:</p>
+          <div class="space-y-2">
+            <% gastosPorCategoria.forEach(function(g) { %>
+              <div class="flex items-center justify-between text-sm">
+                <span class="text-slate-700 font-medium"><%= g.categoria.replace('_', ' ') %></span>
+                <span class="font-bold text-slate-900"><%= formatMoney(g.subtotal) %></span>
+              </div>
+              <div class="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
+                <div class="bg-slate-800 h-1.5 rounded-full" style="width: <%= gastosTotales > 0 ? ((g.subtotal / gastosTotales) * 100).toFixed(0) : 0 %>%"></div>
+              </div>
+            <% }); %>
+          </div>
+        </div>
+
+        <!-- Gastos Imputados a Vehículos de la Flota -->
+        <div class="pt-3 border-t border-slate-100">
+          <p class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Costos por Vehículo (Flota):</p>
+          <div class="space-y-2">
+            <% gastosFlota.forEach(function(v) { %>
+              <div class="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 border border-slate-100 text-xs">
+                <div>
+                  <p class="font-bold text-slate-900">🚚 <%= v.placa %></p>
+                  <p class="text-[11px] text-slate-500"><%= v.modelo %></p>
+                </div>
+                <div class="text-right">
+                  <span class="font-extrabold text-slate-900"><%= formatMoney(v.total_gasto_vehiculo) %></span>
+                  <span class="block text-[10px] text-slate-400">Combustible/Mant.</span>
+                </div>
+              </div>
+            <% }); %>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Columna Derecha: Alertas de Stock y Últimos Pedidos -->
+    <div class="space-y-6">
+      
+      <!-- Alertas de Stock Crítico -->
+      <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-3">
+        <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+          <div class="flex items-center space-x-2">
+            <h2 class="text-base font-bold text-slate-900">Alertas de Existencia Mínima</h2>
+            <span class="px-2 py-0.5 rounded-full text-xs font-bold <%= alertasStock.length > 0 ? 'bg-amber-100 text-amber-900' : 'bg-emerald-100 text-emerald-900' %>">
+              <%= alertasStock.length %>
+            </span>
+          </div>
+          <a href="/productos" class="text-xs font-semibold text-slate-600 hover:text-slate-900">Inventario →</a>
+        </div>
+
+        <% if (alertasStock.length === 0) { %>
+          <div class="p-6 text-center text-xs text-emerald-800 bg-emerald-50 rounded-xl border border-emerald-200 font-medium">
+            ✅ Todos los materiales tienen stock por encima del nivel mínimo.
+          </div>
+        <% } else { %>
+          <div class="space-y-2">
+            <% alertasStock.forEach(function(prod) { %>
+              <div class="flex items-center justify-between p-3 rounded-xl bg-amber-50/70 border border-amber-200 text-xs">
+                <div>
+                  <p class="font-bold text-slate-900"><%= prod.nombre %></p>
+                  <p class="text-[11px] text-slate-500 font-mono">SKU: <%= prod.codigo_sku %></p>
+                </div>
+                <div class="text-right">
+                  <p class="font-black text-amber-800 text-sm">
+                    <%= Number(prod.existencia).toFixed(1) %> <%= prod.unidad_medida %>
+                  </p>
+                  <p class="text-[10px] text-slate-500">Mínimo: <%= prod.alerta_existencia_minima %></p>
+                </div>
+              </div>
+            <% }); %>
+          </div>
+        <% } %>
+      </div>
+
+      <!-- Pedidos y Cotizaciones Recientes -->
+      <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-3">
+        <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+          <h2 class="text-base font-bold text-slate-900">Actividad Comercial Reciente</h2>
+          <a href="/pedidos" class="text-xs font-semibold text-slate-600 hover:text-slate-900">Ver todos →</a>
+        </div>
+
+        <div class="space-y-2">
+          <% ultimosPedidos.forEach(function(p) { %>
+            <a href="/pedidos/ver/<%= p.id %>" class="flex items-center justify-between p-2.5 rounded-xl hover:bg-slate-50 border border-transparent hover:border-slate-200 transition text-xs">
+              <div>
+                <div class="flex items-center space-x-1.5">
+                  <span class="font-mono font-bold text-slate-900"><%= p.codigo_orden %></span>
+                  <span class="text-[10px] px-1.5 py-0.2 rounded font-bold <%= p.tipo_documento === 'VENTA' ? 'bg-slate-900 text-white' : 'bg-slate-200 text-slate-700' %>">
+                    <%= p.tipo_documento %>
+                  </span>
+                </div>
+                <p class="text-slate-600 mt-0.5"><%= p.cliente_nombre %></p>
+              </div>
+              <div class="text-right">
+                <p class="font-bold text-slate-900"><%= formatMoney(p.total) %></p>
+                <span class="text-[10px] font-semibold <%= p.estado === 'PAGADO' ? 'text-emerald-700' : 'text-amber-700' %>">
+                  <%= p.estado %>
+                </span>
+              </div>
+            </a>
+          <% }); %>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+
+</div>

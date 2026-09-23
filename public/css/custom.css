@@ -1,0 +1,64 @@
+/* Estilos personalizados y utilidades de impresión para Distribuidora Coronado */
+
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+
+body {
+  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Áreas de toque cómodas para mobile-first */
+.touch-field {
+  min-height: 3rem; /* 48px */
+}
+.touch-field-lg {
+  min-height: 3.5rem; /* 56px */
+}
+
+/* Estilos limpios para impresión de cotizaciones y facturas */
+@media print {
+  body {
+    background-color: #ffffff !important;
+    color: #0f172a !important;
+    font-size: 11pt;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  /* Ocultar elementos de navegación y acciones */
+  .no-print,
+  #bottom-navbar,
+  #mobile-header,
+  #desktop-sidebar,
+  #mobile-drawer,
+  .print-hide {
+    display: none !important;
+  }
+
+  /* Expandir contenedor principal a pantalla completa */
+  main {
+    margin: 0 !important;
+    padding: 0 !important;
+    max-width: 100% !important;
+    box-shadow: none !important;
+    border: none !important;
+  }
+
+  .print-sheet {
+    border: none !important;
+    box-shadow: none !important;
+    padding: 10mm 15mm !important;
+    width: 100% !important;
+    page-break-inside: avoid;
+  }
+
+  .print-border {
+    border: 1px solid #cbd5e1 !important;
+  }
+
+  .print-bg-subtle {
+    background-color: #f8fafc !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}

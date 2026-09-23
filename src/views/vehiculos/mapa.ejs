@@ -1,0 +1,389 @@
+<!-- Hoja de estilos de Leaflet -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+
+<div class="space-y-4">
+
+  <!-- Barra de Encabezado y Métricas Rápidas -->
+  <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 bg-white border border-slate-200 rounded-2xl p-4 sm:p-5 shadow-sm">
+    <div>
+      <div class="flex items-center space-x-2.5">
+        <div class="w-9 h-9 rounded-xl bg-slate-900 text-white flex items-center justify-center font-black shadow-sm">
+          🛰️
+        </div>
+        <div>
+          <h1 class="text-xl font-bold tracking-tight text-slate-900">Monitoreo GPS en Vivo</h1>
+          <p class="text-xs text-slate-500 font-medium">Ubicación satelital y telemetría de la flota en tiempo real</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Indicadores de Estado y Acciones Rápidas -->
+    <div class="flex flex-wrap items-center gap-2 text-xs">
+      <div class="flex items-center space-x-2 bg-slate-50 px-3 py-2 rounded-xl border border-slate-200">
+        <span class="flex h-2.5 w-2.5 relative">
+          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+          <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+        </span>
+        <span class="text-slate-600 font-medium">En Vivo:</span>
+        <strong id="contador-en-linea" class="text-slate-900 font-bold">0</strong>
+        <span class="text-slate-300">/</span>
+        <span class="text-slate-600">Total:</span>
+        <strong id="contador-total" class="text-slate-900 font-bold"><%= vehiculos.length %></strong>
+      </div>
+
+      <!-- Botón Centrar Mapa -->
+      <button 
+        type="button" 
+        id="btn-centrar-mapa"
+        title="Ajustar zoom para ver toda la flota"
+        class="h-10 px-3.5 inline-flex items-center space-x-1.5 bg-white hover:bg-slate-50 text-slate-700 font-bold rounded-xl border border-slate-200 shadow-sm transition"
+      >
+        <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+        </svg>
+        <span>Centrar Flota</span>
+      </button>
+
+      <!-- Botón Actualizar Ahora -->
+      <button 
+        type="button" 
+        id="btn-actualizar-ahora"
+        class="h-10 px-3.5 inline-flex items-center space-x-1.5 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl shadow-sm transition"
+      >
+        <svg id="icono-refrescar" class="w-4 h-4 text-slate-300 transition-transform duration-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+        </svg>
+        <span>Actualizar (<span id="cuenta-regresiva" class="font-mono">30s</span>)</span>
+      </button>
+
+      <a href="/vehiculos" class="h-10 px-3 inline-flex items-center text-slate-500 hover:text-slate-800 font-semibold rounded-xl hover:bg-slate-100 transition">
+        Volver
+      </a>
+    </div>
+  </div>
+
+  <!-- Contenedor Principal: Mapa y Lista Lateral -->
+  <div class="grid grid-cols-1 lg:grid-cols-4 gap-4 items-start">
+
+    <!-- Mapa Interactivo Leaflet (Ocupa 3 columnas en desktop) -->
+    <div class="lg:col-span-3 bg-white border border-slate-200 rounded-2xl p-2 shadow-sm overflow-hidden">
+      <div id="mapa-flota" class="w-full h-[520px] sm:h-[620px] rounded-xl z-10 bg-slate-100">
+        <!-- Mapa inyectado por Leaflet.js -->
+      </div>
+      <div class="p-2.5 text-[11px] text-slate-400 flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 mt-2">
+        <div class="flex items-center space-x-3">
+          <span class="flex items-center space-x-1.5"><span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span><span class="text-slate-600 font-medium">En Línea (< 2 min)</span></span>
+          <span class="flex items-center space-x-1.5"><span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span><span class="text-slate-600 font-medium">Inactivo / Detenido</span></span>
+          <span class="flex items-center space-x-1.5"><span class="w-2.5 h-2.5 rounded-full bg-slate-400"></span><span class="text-slate-600 font-medium">Desconectado</span></span>
+        </div>
+        <span>Mapas provistos por © OpenStreetMap</span>
+      </div>
+    </div>
+
+    <!-- Lista de Unidades de la Flota (Ocupa 1 columna en desktop) -->
+    <div class="lg:col-span-1 bg-white border border-slate-200 rounded-2xl p-4 shadow-sm space-y-3">
+      <div class="flex items-center justify-between pb-2 border-b border-slate-100">
+        <h2 class="text-xs font-bold uppercase tracking-wider text-slate-500">Unidades de la Flota</h2>
+        <span class="text-[11px] font-mono text-slate-400">Total: <%= vehiculos.length %></span>
+      </div>
+
+      <div id="lista-vehiculos" class="space-y-2.5 max-h-[560px] overflow-y-auto pr-1">
+        <% vehiculos.forEach(function(v) { %>
+          <div 
+            id="card-vehiculo-<%= v.vehiculo_id %>"
+            onclick="enfocarVehiculo('<%= v.vehiculo_id %>')"
+            class="p-3 rounded-xl border border-slate-200 hover:border-slate-400 bg-slate-50/70 hover:bg-slate-50 transition cursor-pointer space-y-1.5"
+          >
+            <div class="flex items-start justify-between">
+              <div>
+                <span class="font-mono text-xs font-extrabold text-slate-900"><%= v.placa %></span>
+                <p class="text-[11px] text-slate-500 truncate max-w-[130px]"><%= v.modelo %></p>
+              </div>
+              <span id="badge-vehiculo-<%= v.vehiculo_id %>" class="px-2 py-0.5 text-[10px] font-bold rounded-md uppercase tracking-wider <%= v.latitud ? 'bg-slate-200 text-slate-700' : 'bg-slate-100 text-slate-400' %>">
+                <%= v.latitud ? 'Cargando...' : 'Sin GPS' %>
+              </span>
+            </div>
+
+            <div class="flex items-center justify-between text-[11px] text-slate-500 pt-1 border-t border-slate-200/60">
+              <span class="truncate max-w-[120px]">👤 <%= v.conductor_asignado %></span>
+              <span id="tiempo-vehiculo-<%= v.vehiculo_id %>" class="font-mono text-[10px]">--</span>
+            </div>
+
+            <div class="pt-1 flex items-center justify-between">
+              <span id="vel-vehiculo-<%= v.vehiculo_id %>" class="text-[10px] font-bold text-slate-600">-- km/h</span>
+              <a 
+                href="/vehiculos/<%= v.vehiculo_id %>/gps-tracker" 
+                target="_blank"
+                onclick="event.stopPropagation();"
+                class="text-[10px] font-bold text-slate-700 hover:text-slate-900 underline"
+                title="Abrir emisor en tablet para este camión"
+              >
+                Abrir Tablet GPS →
+              </a>
+            </div>
+          </div>
+        <% }); %>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+<!-- Librería Leaflet.js desde CDN Oficial -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+<!-- Lógica del Mapa en Vivo -->
+<script>
+  (function () {
+    'use strict';
+
+    // Coordenadas centrales por defecto (Bolivia: Cochabamba / Eje troncal)
+    const CENTRO_DEFAULT = [-17.3895, -66.1568];
+    const ZOOM_DEFAULT = 13;
+
+    // Inicializar mapa de Leaflet
+    const map = L.map('mapa-flota', {
+      center: CENTRO_DEFAULT,
+      zoom: ZOOM_DEFAULT,
+      zoomControl: true
+    });
+
+    // Capa base libre de OpenStreetMap
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(map);
+
+    // Almacenamiento de marcadores por ID de vehículo
+    const marcadores = {};
+    let datosVehiculos = [];
+    let cuentaRegresiva = 30;
+    let timerRef = null;
+
+    // Función para crear un icono estilizado HTML personalizado
+    function crearIconoCamion(estadoGps, placa) {
+      let colorBg = 'bg-slate-700';
+      let haloPulso = '';
+
+      if (estadoGps === 'EN_LINEA') {
+        colorBg = 'bg-emerald-600';
+        haloPulso = '<span class="animate-ping absolute -top-1 -right-1 h-3 w-3 rounded-full bg-emerald-400 opacity-75"></span>';
+      } else if (estadoGps === 'SENAL_RECIENTE') {
+        colorBg = 'bg-amber-600';
+      }
+
+      const html = `
+        <div class="relative flex flex-col items-center" style="transform: translate(-50%, -100%);">
+          <div class="relative flex items-center justify-center w-9 h-9 rounded-2xl ${colorBg} text-white shadow-lg border-2 border-white">
+            ${haloPulso}
+            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0"></path>
+            </svg>
+          </div>
+          <div class="mt-1 px-1.5 py-0.5 rounded bg-slate-950 text-white font-mono font-extrabold text-[10px] shadow border border-slate-700 whitespace-nowrap">
+            ${placa}
+          </div>
+          <div class="w-1.5 h-1.5 bg-slate-900 rounded-full mt-0.5"></div>
+        </div>
+      `;
+
+      return L.divIcon({
+        className: 'custom-gps-marker',
+        html: html,
+        iconSize: [40, 50],
+        iconAnchor: [20, 50],
+        popupAnchor: [0, -50]
+      });
+    }
+
+    // Crear el contenido del Popup con estilo corporativo Coronado
+    function generarContenidoPopup(v) {
+      let badgeClase = 'bg-slate-100 text-slate-700';
+      let badgeTexto = 'Desconectado';
+
+      if (v.estado_gps === 'EN_LINEA') {
+        badgeClase = 'bg-emerald-100 text-emerald-800';
+        badgeTexto = 'En Vivo';
+      } else if (v.estado_gps === 'SENAL_RECIENTE') {
+        badgeClase = 'bg-amber-100 text-amber-800';
+        badgeTexto = 'Señal Reciente';
+      }
+
+      return `
+        <div class="p-1 font-sans text-slate-900" style="min-width: 200px;">
+          <div class="flex items-center justify-between pb-2 border-b border-slate-200">
+            <div>
+              <span class="font-mono text-base font-black text-slate-900">${v.placa}</span>
+              <p class="text-xs text-slate-500 font-medium">${v.modelo}</p>
+            </div>
+            <span class="px-2 py-0.5 text-[10px] font-bold uppercase rounded-md ${badgeClase}">
+              ${badgeTexto}
+            </span>
+          </div>
+
+          <div class="py-2.5 space-y-1.5 text-xs text-slate-600">
+            <p><span class="font-semibold text-slate-700">Chofer:</span> ${v.conductor_asignado}</p>
+            <p><span class="font-semibold text-slate-700">Velocidad:</span> <strong class="text-slate-900 font-mono">${v.velocidad_kmh} km/h</strong></p>
+            <p><span class="font-semibold text-slate-700">Actualizado:</span> ${v.tiempo_relativo}</p>
+            <p class="text-[10px] text-slate-400 font-mono">Coords: ${v.latitud.toFixed(5)}, ${v.longitud.toFixed(5)}</p>
+          </div>
+
+          <div class="pt-2 border-t border-slate-200 text-right">
+            <a href="/vehiculos/${v.vehiculo_id}/gps-tracker" target="_blank" class="inline-block text-[11px] font-bold text-slate-900 underline hover:text-emerald-600 transition">
+              Abrir Emisor Tablet →
+            </a>
+          </div>
+        </div>
+      `;
+    }
+
+    // Actualizar marcadores en el mapa y en la lista lateral
+    function procesarUbicaciones(vehiculos) {
+      datosVehiculos = vehiculos;
+      let enLineaCount = 0;
+      const limites = [];
+
+      vehiculos.forEach(v => {
+        if (v.estado_gps === 'EN_LINEA') enLineaCount++;
+
+        // Actualizar tarjeta lateral
+        actualizarTarjetaLateral(v);
+
+        // Si tiene coordenadas válidas, actualizar o crear marcador
+        if (v.latitud !== null && v.longitud !== null) {
+          const latLng = [v.latitud, v.longitud];
+          limites.push(latLng);
+
+          const icono = crearIconoCamion(v.estado_gps, v.placa);
+          const popupHtml = generarContenidoPopup(v);
+
+          if (marcadores[v.vehiculo_id]) {
+            // Actualizar posición y contenido existente
+            marcadores[v.vehiculo_id].setLatLng(latLng);
+            marcadores[v.vehiculo_id].setIcon(icono);
+            marcadores[v.vehiculo_id].setPopupContent(popupHtml);
+          } else {
+            // Crear nuevo marcador
+            const marker = L.marker(latLng, { icon: icono }).addTo(map);
+            marker.bindPopup(popupHtml);
+            marcadores[v.vehiculo_id] = marker;
+          }
+        } else if (marcadores[v.vehiculo_id]) {
+          // Si el vehículo perdió sus coordenadas, remover marcador
+          map.removeLayer(marcadores[v.vehiculo_id]);
+          delete marcadores[v.vehiculo_id];
+        }
+      });
+
+      // Actualizar contadores superiores
+      const contEnLinea = document.getElementById('contador-en-linea');
+      const contTotal = document.getElementById('contador-total');
+      if (contEnLinea) contEnLinea.textContent = enLineaCount.toString();
+      if (contTotal) contTotal.textContent = vehiculos.length.toString();
+
+      return limites;
+    }
+
+    // Actualizar tarjeta en la lista lateral
+    function actualizarTarjetaLateral(v) {
+      const badge = document.getElementById(`badge-vehiculo-${v.vehiculo_id}`);
+      const txtTiempo = document.getElementById(`tiempo-vehiculo-${v.vehiculo_id}`);
+      const txtVel = document.getElementById(`vel-vehiculo-${v.vehiculo_id}`);
+
+      if (badge) {
+        if (v.estado_gps === 'EN_LINEA') {
+          badge.textContent = 'En Vivo';
+          badge.className = 'px-2 py-0.5 text-[10px] font-bold rounded-md uppercase tracking-wider bg-emerald-100 text-emerald-800';
+        } else if (v.estado_gps === 'SENAL_RECIENTE') {
+          badge.textContent = 'Reciente';
+          badge.className = 'px-2 py-0.5 text-[10px] font-bold rounded-md uppercase tracking-wider bg-amber-100 text-amber-800';
+        } else if (v.latitud !== null) {
+          badge.textContent = 'Inactivo';
+          badge.className = 'px-2 py-0.5 text-[10px] font-bold rounded-md uppercase tracking-wider bg-slate-200 text-slate-700';
+        } else {
+          badge.textContent = 'Sin GPS';
+          badge.className = 'px-2 py-0.5 text-[10px] font-bold rounded-md uppercase tracking-wider bg-slate-100 text-slate-400';
+        }
+      }
+
+      if (txtTiempo) txtTiempo.textContent = v.tiempo_relativo || '--';
+      if (txtVel) txtVel.textContent = v.velocidad_kmh ? `${v.velocidad_kmh} km/h` : '0 km/h';
+    }
+
+    // Centrar mapa en toda la flota
+    function centrarFlota() {
+      const coordenadasValidas = Object.values(marcadores).map(m => m.getLatLng());
+      if (coordenadasValidas.length > 0) {
+        const bounds = L.latLngBounds(coordenadasValidas);
+        map.fitBounds(bounds, { padding: [50, 50], maxZoom: 16 });
+      } else {
+        map.setView(CENTRO_DEFAULT, ZOOM_DEFAULT);
+      }
+    }
+
+    // Función para enfocar un camión específico desde la lista lateral
+    window.enfocarVehiculo = function (vehiculoId) {
+      const marker = marcadores[vehiculoId];
+      if (marker) {
+        map.flyTo(marker.getLatLng(), 16, { animate: true, duration: 1.2 });
+        marker.openPopup();
+      } else {
+        alert('Este vehículo aún no ha transmitido coordenadas GPS.');
+      }
+    };
+
+    // Consultar el endpoint /api/vehiculos/ubicaciones cada 30 segundos
+    async function actualizarUbicaciones(esManual = false) {
+      const iconoRefrescar = document.getElementById('icono-refrescar');
+      if (iconoRefrescar) iconoRefrescar.classList.add('rotate-180');
+
+      try {
+        const res = await fetch('/api/vehiculos/ubicaciones');
+        const data = await res.json();
+
+        if (res.ok && data.success) {
+          const limites = procesarUbicaciones(data.vehiculos);
+          if (esManual && limites.length > 0) {
+            centrarFlota();
+          }
+        }
+      } catch (err) {
+        console.error('[Mapa GPS] Error al consultar telemetría:', err);
+      } finally {
+        if (iconoRefrescar) {
+          setTimeout(() => iconoRefrescar.classList.remove('rotate-180'), 500);
+        }
+      }
+    }
+
+    // Botones de control
+    const btnCentrar = document.getElementById('btn-centrar-mapa');
+    if (btnCentrar) {
+      btnCentrar.addEventListener('click', centrarFlota);
+    }
+
+    const btnActualizar = document.getElementById('btn-actualizar-ahora');
+    if (btnActualizar) {
+      btnActualizar.addEventListener('click', () => {
+        cuentaRegresiva = 30;
+        actualizarUbicaciones(false);
+      });
+    }
+
+    // Ciclo de cuenta regresiva y polling cada 30 segundos
+    const elemCuenta = document.getElementById('cuenta-regresiva');
+    setInterval(() => {
+      cuentaRegresiva--;
+      if (cuentaRegresiva <= 0) {
+        cuentaRegresiva = 30;
+        actualizarUbicaciones(false);
+      }
+      if (elemCuenta) elemCuenta.textContent = `${cuentaRegresiva}s`;
+    }, 1000);
+
+    // Consulta inicial inmediata
+    actualizarUbicaciones(true);
+
+  })();
+</script>

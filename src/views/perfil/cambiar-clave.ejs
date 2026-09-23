@@ -1,0 +1,210 @@
+<div class="max-w-2xl mx-auto space-y-6">
+  <!-- Cabecera de Página -->
+  <div class="flex items-center justify-between">
+    <div>
+      <h1 class="text-2xl font-bold text-slate-900 tracking-tight">Mi Perfil y Seguridad</h1>
+      <p class="text-sm text-slate-500 font-medium">Gestión de credenciales personales y datos de cuenta</p>
+    </div>
+    <a href="<%= currentUser.rol === 'VENDEDOR' ? '/pedidos' : '/dashboard' %>" class="inline-flex items-center space-x-1 text-sm font-semibold text-slate-600 hover:text-slate-900 transition">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+      </svg>
+      <span>Volver</span>
+    </a>
+  </div>
+
+  <!-- Tarjeta Resumen Informativa del Usuario Logueado (Solo Lectura) -->
+  <div class="bg-white border border-slate-200 rounded-2xl p-5 sm:p-6 shadow-sm">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div class="flex items-center space-x-4">
+        <!-- Avatar / Inicial -->
+        <div class="w-14 h-14 rounded-2xl bg-slate-900 text-white flex items-center justify-center font-extrabold text-xl shadow-sm flex-shrink-0">
+          <%= usuario.nombre ? usuario.nombre.charAt(0).toUpperCase() : 'U' %>
+        </div>
+        <div>
+          <div class="flex items-center space-x-2">
+            <h2 class="text-lg font-bold text-slate-900 leading-snug"><%= usuario.nombre %></h2>
+            <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider <%= usuario.rol === 'SOCIO' ? 'bg-purple-50 text-purple-800 border border-purple-200' : (usuario.rol === 'ADMINISTRADOR' ? 'bg-blue-50 text-blue-800 border border-blue-200' : 'bg-amber-50 text-amber-800 border border-amber-200') %>">
+              <%= usuario.rol %>
+            </span>
+          </div>
+          <p class="text-xs text-slate-500 font-mono mt-0.5"><%= usuario.correo %></p>
+        </div>
+      </div>
+
+      <!-- Métricas / Atributos del Perfil -->
+      <div class="flex items-center gap-3 pt-3 sm:pt-0 border-t sm:border-t-0 border-slate-100">
+        <% if (usuario.rol === 'VENDEDOR') { %>
+          <div class="bg-amber-50 border border-amber-200/80 rounded-xl px-3.5 py-2 text-right">
+            <span class="block text-[10px] font-bold uppercase tracking-wider text-amber-800">Comisión Ventas</span>
+            <span class="text-base font-extrabold text-amber-900"><%= Number(usuario.porcentaje_comision).toFixed(2) %>%</span>
+          </div>
+        <% } %>
+        <div class="bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-right">
+          <span class="block text-[10px] font-bold uppercase tracking-wider text-slate-500">Estado</span>
+          <span class="inline-flex items-center text-xs font-bold text-emerald-700">
+            <span class="w-2 h-2 rounded-full bg-emerald-500 mr-1.5 animate-pulse"></span>
+            Activo
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Formulario de Cambio de Contraseña -->
+  <div class="bg-white border border-slate-200 rounded-2xl p-5 sm:p-8 shadow-sm">
+    <div class="border-b border-slate-100 pb-4 mb-6">
+      <h3 class="text-base font-bold text-slate-900 flex items-center space-x-2">
+        <svg class="w-5 h-5 text-slate-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+        </svg>
+        <span>Cambiar Contraseña de Acceso</span>
+      </h3>
+      <p class="text-xs text-slate-500 mt-1">
+        Para mantener tu cuenta segura, introduce tu contraseña actual antes de definir una nueva credencial.
+      </p>
+    </div>
+
+    <form action="/perfil/cambiar-clave" method="POST" id="form-cambiar-clave" class="space-y-6">
+      
+      <!-- Contraseña Actual (OBLIGATORIA) -->
+      <div>
+        <div class="flex items-center justify-between mb-1.5">
+          <label for="clave_actual" class="block text-xs font-bold uppercase tracking-wider text-slate-700">
+            Contraseña Actual *
+          </label>
+          <span class="text-[11px] text-slate-400 font-medium">Requerida para autorizar el cambio</span>
+        </div>
+        <div class="relative">
+          <input 
+            type="password" 
+            id="clave_actual" 
+            name="clave_actual" 
+            required 
+            autocomplete="current-password"
+            placeholder="••••••••••••" 
+            class="w-full h-14 px-4 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 placeholder-slate-400 focus:bg-white focus:ring-2 focus:ring-slate-900 focus:outline-none text-base transition pr-12"
+          >
+          <button type="button" class="toggle-password absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1" data-target="clave_actual">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Nueva Contraseña -->
+      <div>
+        <div class="flex items-center justify-between mb-1.5">
+          <label for="clave_nueva" class="block text-xs font-bold uppercase tracking-wider text-slate-700">
+            Nueva Contraseña *
+          </label>
+          <span class="text-[11px] text-slate-500 font-medium">Mínimo 6 caracteres</span>
+        </div>
+        <div class="relative">
+          <input 
+            type="password" 
+            id="clave_nueva" 
+            name="clave_nueva" 
+            required 
+            minlength="6"
+            autocomplete="new-password"
+            placeholder="Introduce tu nueva contraseña segura" 
+            class="w-full h-14 px-4 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 placeholder-slate-400 focus:bg-white focus:ring-2 focus:ring-slate-900 focus:outline-none text-base transition pr-12"
+          >
+          <button type="button" class="toggle-password absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1" data-target="clave_nueva">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+            </svg>
+          </button>
+        </div>
+        <p class="text-xs text-slate-500 mt-1">
+          Debe ser distinta a tu clave actual y contener al menos 6 caracteres.
+        </p>
+      </div>
+
+      <!-- Confirmar Nueva Contraseña -->
+      <div>
+        <label for="confirmar_clave_nueva" class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
+          Confirmar Nueva Contraseña *
+        </label>
+        <div class="relative">
+          <input 
+            type="password" 
+            id="confirmar_clave_nueva" 
+            name="confirmar_clave_nueva" 
+            required 
+            minlength="6"
+            autocomplete="new-password"
+            placeholder="Repite la nueva contraseña exactamente igual" 
+            class="w-full h-14 px-4 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 placeholder-slate-400 focus:bg-white focus:ring-2 focus:ring-slate-900 focus:outline-none text-base transition pr-12"
+          >
+          <button type="button" class="toggle-password absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1" data-target="confirmar_clave_nueva">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+            </svg>
+          </button>
+        </div>
+        <p id="coincidencia-msg" class="text-xs mt-1.5 hidden"></p>
+      </div>
+
+      <!-- Botones de Acción -->
+      <div class="pt-4 border-t border-slate-100 flex flex-col-reverse sm:flex-row sm:justify-end gap-3">
+        <a href="<%= currentUser.rol === 'VENDEDOR' ? '/pedidos' : '/dashboard' %>" class="h-14 px-6 inline-flex items-center justify-center rounded-xl border border-slate-300 text-slate-700 hover:bg-slate-50 font-semibold text-sm transition">
+          Cancelar
+        </a>
+        <button type="submit" id="btn-guardar-clave" class="h-14 px-8 inline-flex items-center justify-center rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-sm shadow-md transition">
+          Actualizar Contraseña
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+  // Mostrar / ocultar texto de contraseña
+  document.querySelectorAll('.toggle-password').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const targetId = btn.getAttribute('data-target');
+      const input = document.getElementById(targetId);
+      if (input) {
+        if (input.type === 'password') {
+          input.type = 'text';
+          btn.classList.add('text-slate-900');
+        } else {
+          input.type = 'password';
+          btn.classList.remove('text-slate-900');
+        }
+      }
+    });
+  });
+
+  // Validación de coincidencia en tiempo real
+  const claveNueva = document.getElementById('clave_nueva');
+  const confirmarClave = document.getElementById('confirmar_clave_nueva');
+  const msg = document.getElementById('coincidencia-msg');
+  const btnGuardar = document.getElementById('btn-guardar-clave');
+
+  function validarCoincidencia() {
+    if (!confirmarClave.value) {
+      msg.classList.add('hidden');
+      return;
+    }
+
+    if (claveNueva.value === confirmarClave.value) {
+      msg.textContent = '✓ Las contraseñas coinciden correctamente.';
+      msg.className = 'text-xs mt-1.5 text-emerald-600 font-semibold block';
+    } else {
+      msg.textContent = '✗ Las contraseñas no coinciden.';
+      msg.className = 'text-xs mt-1.5 text-rose-600 font-semibold block';
+    }
+  }
+
+  if (claveNueva && confirmarClave) {
+    claveNueva.addEventListener('input', validarCoincidencia);
+    confirmarClave.addEventListener('input', validarCoincidencia);
+  }
+</script>

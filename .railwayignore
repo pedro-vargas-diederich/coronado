@@ -1,0 +1,28 @@
+# Dependencias locales (Railway instala las suyas en contenedor limpio)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Variables de entorno locales sensibles
+.env
+.env.local
+.env.development
+.env.test
+
+# Archivos de pruebas y scripts auxiliares
+test_*.js
+test/
+coverage/
+
+# Archivos del sistema y editores
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+*.log
+logs/

@@ -1,0 +1,146 @@
+<div class="space-y-6">
+  <!-- Cabecera de Página -->
+  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div>
+      <h1 class="text-2xl font-bold text-slate-900 tracking-tight">Catálogo & Inventario</h1>
+      <p class="text-sm text-slate-500 font-medium">Control de stock de cementos, agregados y materiales</p>
+    </div>
+    <% if (userRole === 'ADMINISTRADOR' || userRole === 'SOCIO') { %>
+      <div>
+        <a href="/productos/nuevo" class="inline-flex items-center justify-center space-x-2 h-12 px-5 bg-slate-900 hover:bg-slate-800 text-white text-sm font-semibold rounded-xl shadow-sm transition w-full sm:w-auto">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"></path>
+          </svg>
+          <span>Nuevo Producto</span>
+        </a>
+      </div>
+    <% } %>
+  </div>
+
+  <!-- Vista Móvil: Tarjetas Colapsables / Compactas (block md:hidden) -->
+  <div class="grid grid-cols-1 gap-3 md:hidden">
+    <% if (productos.length === 0) { %>
+      <div class="p-8 text-center bg-white rounded-2xl border border-slate-200 text-slate-500 text-sm">
+        No hay productos registrados en el inventario.
+      </div>
+    <% } %>
+
+    <% productos.forEach(function(item) { %>
+      <div class="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm space-y-3">
+        <div class="flex items-start justify-between">
+          <div>
+            <span class="inline-block px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-slate-100 text-slate-700 rounded-md">
+              <%= item.categoria %>
+            </span>
+            <h2 class="text-base font-bold text-slate-900 mt-1 leading-snug"><%= item.nombre %></h2>
+            <p class="text-xs text-slate-500 font-mono mt-0.5">SKU: <%= item.codigo_sku %></p>
+          </div>
+          <span class="text-xs font-semibold px-2 py-1 rounded-lg border <%= item.alerta_stock ? 'bg-amber-50 text-amber-800 border-amber-200' : 'bg-slate-50 text-slate-700 border-slate-200' %>">
+            <%= item.unidad_medida %>
+          </span>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2 pt-2 border-t border-slate-100 text-sm">
+          <div>
+            <p class="text-xs text-slate-500 font-medium">Existencia:</p>
+            <p class="text-base font-bold <%= item.alerta_stock ? 'text-amber-700' : 'text-slate-900' %>">
+              <%= Number(item.existencia).toFixed(1) %> <span class="text-xs font-normal text-slate-500"><%= item.unidad_medida %></span>
+            </p>
+            <% if (item.alerta_stock) { %>
+              <p class="text-[10px] text-amber-700 font-semibold mt-0.5">⚠️ Stock Bajo (Mín: <%= item.alerta_existencia_minima %>)</p>
+            <% } %>
+          </div>
+
+          <div>
+            <p class="text-xs text-slate-500 font-medium">Precio Venta:</p>
+            <p class="text-base font-bold text-slate-900"><%= formatMoney(item.precio_venta) %></p>
+            <% if (item.precio_compra !== null) { %>
+              <p class="text-xs text-slate-500 font-medium">Costo: <span class="text-slate-700 font-semibold"><%= formatMoney(item.precio_compra) %></span></p>
+            <% } %>
+          </div>
+        </div>
+
+        <% if (userRole === 'ADMINISTRADOR' || userRole === 'SOCIO') { %>
+          <div class="pt-2 border-t border-slate-100 flex justify-end">
+            <a href="/productos/editar/<%= item.id %>" class="h-10 px-4 inline-flex items-center space-x-1 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
+              </svg>
+              <span>Editar</span>
+            </a>
+          </div>
+        <% } %>
+      </div>
+    <% }); %>
+  </div>
+
+  <!-- Vista Escritorio: Tabla Estándar con Scroll y Columnas Claras (hidden md:table) -->
+  <div class="hidden md:block bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+    <div class="overflow-x-auto">
+      <table class="w-full text-left border-collapse text-sm">
+        <thead>
+          <tr class="bg-slate-50/80 border-b border-slate-200 text-xs font-bold text-slate-600 uppercase tracking-wider">
+            <th class="py-3.5 px-4">SKU / Código</th>
+            <th class="py-3.5 px-4">Descripción del Material</th>
+            <th class="py-3.5 px-4">Categoría</th>
+            <th class="py-3.5 px-4">Unidad</th>
+            <% if (userRole !== 'VENDEDOR') { %>
+              <th class="py-3.5 px-4 text-right">Costo Compra</th>
+            <% } %>
+            <th class="py-3.5 px-4 text-right">Precio Venta</th>
+            <th class="py-3.5 px-4 text-right">Stock Actual</th>
+            <th class="py-3.5 px-4 text-center">Estado</th>
+            <% if (userRole === 'ADMINISTRADOR' || userRole === 'SOCIO') { %>
+              <th class="py-3.5 px-4 text-center">Acciones</th>
+            <% } %>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+          <% if (productos.length === 0) { %>
+            <tr>
+              <td colspan="9" class="py-8 text-center text-slate-500">No hay materiales en inventario.</td>
+            </tr>
+          <% } %>
+
+          <% productos.forEach(function(item) { %>
+            <tr class="hover:bg-slate-50/60 transition">
+              <td class="py-3.5 px-4 font-mono font-semibold text-slate-800"><%= item.codigo_sku %></td>
+              <td class="py-3.5 px-4 font-semibold text-slate-900"><%= item.nombre %></td>
+              <td class="py-3.5 px-4 text-slate-600"><%= item.categoria %></td>
+              <td class="py-3.5 px-4 text-slate-600">
+                <span class="inline-block px-2 py-0.5 text-xs bg-slate-100 rounded text-slate-700 font-medium">
+                  <%= item.unidad_medida %>
+                </span>
+              </td>
+              <% if (userRole !== 'VENDEDOR') { %>
+                <td class="py-3.5 px-4 text-right font-medium text-slate-600"><%= formatMoney(item.precio_compra) %></td>
+              <% } %>
+              <td class="py-3.5 px-4 text-right font-bold text-slate-900"><%= formatMoney(item.precio_venta) %></td>
+              <td class="py-3.5 px-4 text-right font-bold <%= item.alerta_stock ? 'text-amber-700' : 'text-slate-800' %>">
+                <%= Number(item.existencia).toFixed(2) %>
+              </td>
+              <td class="py-3.5 px-4 text-center">
+                <% if (item.alerta_stock) { %>
+                  <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-800 border border-amber-200">
+                    Bajo Stock
+                  </span>
+                <% } else { %>
+                  <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200">
+                    Óptimo
+                  </span>
+                <% } %>
+              </td>
+              <% if (userRole === 'ADMINISTRADOR' || userRole === 'SOCIO') { %>
+                <td class="py-3.5 px-4 text-center">
+                  <a href="/productos/editar/<%= item.id %>" class="text-slate-600 hover:text-slate-900 font-semibold text-xs px-2 py-1 rounded hover:bg-slate-100 transition">
+                    Editar
+                  </a>
+                </td>
+              <% } %>
+            </tr>
+          <% }); %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>

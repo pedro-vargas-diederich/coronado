@@ -1,0 +1,97 @@
+<div class="max-w-2xl mx-auto space-y-6">
+  <div class="flex items-center justify-between">
+    <div>
+      <h1 class="text-2xl font-bold text-slate-900 tracking-tight">
+        <%= vehiculo ? `Editar Vehículo ${vehiculo.placa}` : 'Registrar Nueva Unidad en Flota' %>
+      </h1>
+      <p class="text-sm text-slate-500 font-medium">Control de transporte, conductor y asignación operativa</p>
+    </div>
+    <a href="/vehiculos" class="inline-flex items-center space-x-1 text-sm font-semibold text-slate-600 hover:text-slate-900">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+      <span>Volver</span>
+    </a>
+  </div>
+
+  <div class="bg-white border border-slate-200 rounded-2xl p-5 sm:p-8 shadow-sm">
+    <form action="<%= accion %>" method="POST" class="space-y-6">
+      
+      <!-- Placa -->
+      <div>
+        <label for="placa" class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
+          Número de Placa *
+        </label>
+        <input 
+          type="text" 
+          id="placa" 
+          name="placa" 
+          required 
+          placeholder="Ej. WTR-892" 
+          value="<%= vehiculo ? vehiculo.placa : '' %>"
+          class="w-full h-14 px-4 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 placeholder-slate-400 focus:bg-white focus:ring-2 focus:ring-slate-900 focus:outline-none uppercase font-mono font-bold text-base transition"
+        >
+      </div>
+
+      <!-- Modelo / Especificación -->
+      <div>
+        <label for="modelo" class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
+          Modelo / Capacidad de Carga *
+        </label>
+        <input 
+          type="text" 
+          id="modelo" 
+          name="modelo" 
+          required 
+          placeholder="Ej. Volqueta Kenworth T880 15m3 o Camión Isuzu 8 Ton" 
+          value="<%= vehiculo ? vehiculo.modelo : '' %>"
+          class="w-full h-14 px-4 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 placeholder-slate-400 focus:bg-white focus:ring-2 focus:ring-slate-900 focus:outline-none text-base transition"
+        >
+      </div>
+
+      <!-- Conductor Asignado -->
+      <div>
+        <label for="conductor_asignado" class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
+          Conductor Asignado *
+        </label>
+        <input 
+          type="text" 
+          id="conductor_asignado" 
+          name="conductor_asignado" 
+          required 
+          placeholder="Ej. Carlos Mendoza" 
+          value="<%= vehiculo ? vehiculo.conductor_asignado : '' %>"
+          class="w-full h-14 px-4 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 placeholder-slate-400 focus:bg-white focus:ring-2 focus:ring-slate-900 focus:outline-none text-base transition"
+        >
+      </div>
+
+      <!-- Estado Operativo (Activo / Inactivo) solo en Edición -->
+      <% if (vehiculo) { %>
+        <div>
+          <label for="activo" class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
+            Estado Operativo de la Unidad
+          </label>
+          <select 
+            id="activo" 
+            name="activo" 
+            class="w-full h-14 px-4 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 focus:bg-white focus:ring-2 focus:ring-slate-900 focus:outline-none text-base transition"
+          >
+            <option value="1" <%= vehiculo.activo ? 'selected' : '' %>>Activo / En Servicio</option>
+            <option value="0" <%= !vehiculo.activo ? 'selected' : '' %>>Inactivo / Fuera de Servicio (Mantenimiento)</option>
+          </select>
+          <p class="text-xs text-slate-500 mt-1.5">
+            Al marcarlo inactivo, la unidad se deshabilita para nuevos pedidos sin borrar su historial de gastos y combustible.
+          </p>
+        </div>
+      <% } %>
+
+      <!-- Botones de Acción -->
+      <div class="pt-4 border-t border-slate-100 flex flex-col-reverse sm:flex-row sm:justify-end gap-3">
+        <a href="/vehiculos" class="h-14 px-6 inline-flex items-center justify-center rounded-xl border border-slate-300 text-slate-700 hover:bg-slate-50 font-semibold text-sm transition">
+          Cancelar
+        </a>
+        <button type="submit" class="h-14 px-8 inline-flex items-center justify-center rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-sm shadow-md transition">
+          <%= vehiculo ? 'Guardar Cambios' : 'Registrar Vehículo' %>
+        </button>
+      </div>
+    </form>
+  </div>
+</div>

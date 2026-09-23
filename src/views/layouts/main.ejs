@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="es" class="h-full bg-slate-50">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title><%= typeof title !== 'undefined' ? title + ' | ' : '' %>Distribuidora Coronado</title>
+  
+  <!-- Tipografía Plus Jakarta Sans -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- Tailwind CSS CDN con configuración personalizada -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+          },
+          colors: {
+            brand: {
+              50: '#f8fafc',
+              900: '#0f172a',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Estilos propios e impresión -->
+  <link rel="stylesheet" href="/css/custom.css">
+
+  <!-- Progressive Web App (PWA) Manifest & Meta Tags -->
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#0F172A">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="application-name" content="Control Empresarial">
+
+  <!-- Metaetiquetas iOS (Safari) -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Control">
+  <link rel="apple-touch-icon" href="/icons/icon-192x192.png">
+  <link rel="apple-touch-icon" sizes="152x152" href="/icons/icon-152x152.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/icons/icon-192x192.png">
+  <link rel="apple-touch-icon" sizes="167x167" href="/icons/icon-192x192.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192x192.png">
+  <%- style %>
+</head>
+<body class="h-full bg-slate-50 text-slate-800 antialiased selection:bg-slate-900 selection:text-white">
+
+  <% if (currentUser) { %>
+    <!-- Cabecera Superior Móvil (Solo pantallas pequeñas) -->
+    <header id="mobile-header" class="md:hidden sticky top-0 z-30 bg-white/95 backdrop-blur border-b border-slate-200 h-14 px-4 flex items-center justify-between no-print">
+      <div class="flex items-center space-x-2.5">
+        <div class="w-8 h-8 rounded-lg bg-slate-900 text-white flex items-center justify-center font-bold text-sm">
+          C
+        </div>
+        <span class="font-bold text-slate-900 text-sm tracking-tight">CORONADO</span>
+      </div>
+
+      <div class="flex items-center space-x-2">
+        <span class="px-2 py-0.5 rounded-full text-[11px] font-bold border <%= currentUser.rol === 'SOCIO' ? 'bg-purple-50 text-purple-800 border-purple-200' : (currentUser.rol === 'ADMINISTRADOR' ? 'bg-blue-50 text-blue-800 border-blue-200' : 'bg-amber-50 text-amber-800 border-amber-200') %>">
+          <%= currentUser.rol %>
+        </span>
+        <button type="button" class="toggle-mobile-drawer p-2 text-slate-600 hover:text-slate-900 rounded-lg">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7"></path>
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- Contenedor Principal de Aplicación con Sidebar en Desktop -->
+    <div class="min-h-full flex flex-col md:flex-row">
+      <!-- Sidebar Desktop -->
+      <%- include('../partials/sidebar-desktop') %>
+
+      <!-- Área de Contenido Principal -->
+      <main class="flex-1 min-w-0 p-4 sm:p-6 md:p-8 pb-24 md:pb-10 max-w-7xl mx-auto w-full">
+        <!-- Notificaciones Flash -->
+        <%- include('../partials/flash-messages') %>
+
+        <!-- Vista Dinámica EJS -->
+        <%- body %>
+      </main>
+    </div>
+
+    <!-- Barra de Navegación Inferior Fija para Móvil -->
+    <%- include('../partials/navbar-mobile') %>
+
+    <!-- Menú Desplegable Drawer para Móvil -->
+    <div id="mobile-drawer-overlay" class="hidden fixed inset-0 bg-slate-900/40 z-50 transition-opacity no-print"></div>
+    <div id="mobile-drawer" class="fixed top-0 right-0 bottom-0 w-80 max-w-[85vw] bg-white z-50 shadow-2xl p-6 flex flex-col justify-between transform translate-x-full transition-transform duration-300 ease-in-out no-print">
+      <div>
+        <div class="flex items-center justify-between pb-4 border-b border-slate-200">
+          <div>
+            <p class="font-bold text-slate-900 text-sm"><%= currentUser.nombre %></p>
+            <p class="text-xs text-slate-500 font-medium"><%= currentUser.correo %></p>
+          </div>
+          <button type="button" class="close-mobile-drawer p-2 text-slate-400 hover:text-slate-600 rounded-lg">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+          </button>
+        </div>
+
+        <nav class="mt-6 space-y-2 text-sm font-medium">
+          <% if (currentUser.rol === 'SOCIO' || currentUser.rol === 'ADMINISTRADOR') { %>
+            <a href="/dashboard" class="flex items-center space-x-3 px-3 py-3 rounded-xl <%= currentPath === '/dashboard' ? 'bg-slate-900 text-white' : 'text-slate-700 hover:bg-slate-100' %>">
+              <span><%= currentUser.rol === 'SOCIO' ? 'Dashboard Financiero' : 'Panel Operativo' %></span>
+            </a>
+            <a href="/productos" class="flex items-center space-x-3 px-3 py-3 rounded-xl <%= currentPath.startsWith('/productos') ? 'bg-slate-900 text-white' : 'text-slate-700 hover:bg-slate-100' %>">
+              <span>Inventario y Existencias</span>
+            </a>
+          <% } %>
+
+          <a href="/pedidos" class="flex items-center space-x-3 px-3 py-3 rounded-xl <%= currentPath.startsWith('/pedidos') && !currentPath.includes('comisiones') ? 'bg-slate-900 text-white' : 'text-slate-700 hover:bg-slate-100' %>">
+            <span><%= currentUser.rol === 'VENDEDOR' ? 'Mis Cotizaciones' : 'Cotizaciones y Ventas' %></span>
+          </a>
+
+          <a href="/contactos" class="flex items-center space-x-3 px-3 py-3 rounded-xl <%= currentPath.startsWith('/contactos') ? 'bg-slate-900 text-white' : 'text-slate-700 hover:bg-slate-100' %>">
+            <span><%= currentUser.rol === 'VENDEDOR' ? 'Mis Clientes' : 'Clientes y Proveedores' %></span>
+          </a>
+
+          <% if (currentUser.rol === 'SOCIO' || currentUser.rol === 'ADMINISTRADOR') { %>
+            <a href="/gastos" class="flex items-center space-x-3 px-3 py-3 rounded-xl <%= currentPath.startsWith('/gastos') ? 'bg-slate-900 text-white' : 'text-slate-700 hover:bg-slate-100' %>">
+              <span>Centro de Gastos</span>
+            </a>
+            <a href="/vehiculos" class="flex items-center space-x-3 px-3 py-3 rounded-xl <%= currentPath === '/vehiculos' ? 'bg-slate-900 text-white' : 'text-slate-700 hover:bg-slate-100' %>">
+              <span>Flota de Vehículos</span>
+            </a>
+            <a href="/vehiculos/mapa" class="flex items-center space-x-2.5 px-3 py-2 ml-3 rounded-xl text-xs <%= currentPath === '/vehiculos/mapa' ? 'bg-slate-800 text-white font-bold' : 'text-slate-600 hover:bg-slate-100' %>">
+              <span>🛰️ Monitoreo GPS en Vivo</span>
+            </a>
+          <% } %>
+
+          <% if (currentUser.rol === 'SOCIO') { %>
+            <a href="/usuarios" class="flex items-center space-x-3 px-3 py-3 rounded-xl <%= currentPath.startsWith('/usuarios') ? 'bg-slate-900 text-white' : 'text-slate-700 hover:bg-slate-100' %>">
+              <span>Usuarios & Personal Interno</span>
+            </a>
+          <% } %>
+
+          <% if (currentUser.rol === 'VENDEDOR') { %>
+            <a href="/pedidos/comisiones" class="flex items-center space-x-3 px-3 py-3 rounded-xl <%= currentPath === '/pedidos/comisiones' ? 'bg-slate-900 text-white' : 'text-slate-700 hover:bg-slate-100' %>">
+              <span>Mis Comisiones</span>
+            </a>
+          <% } %>
+
+          <a href="/reportes" class="flex items-center space-x-3 px-3 py-3 rounded-xl <%= currentPath.startsWith('/reportes') ? 'bg-slate-900 text-white' : 'text-slate-700 hover:bg-slate-100' %>">
+            <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+            </svg>
+            <span>Reportes & Análisis</span>
+          </a>
+
+          <a href="/perfil/cambiar-clave" class="flex items-center space-x-3 px-3 py-3 rounded-xl <%= currentPath.startsWith('/perfil') ? 'bg-slate-900 text-white' : 'text-slate-700 hover:bg-slate-100' %>">
+            <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"></path>
+            </svg>
+            <span>Mi Perfil & Seguridad</span>
+          </a>
+        </nav>
+      </div>
+
+      <div class="pt-6 border-t border-slate-200">
+        <!-- Botón PWA Instalable en Móvil Drawer -->
+        <button type="button" class="pwa-install-trigger hidden w-full mb-3 h-12 flex items-center justify-center space-x-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold shadow-md transition">
+          <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+          </svg>
+          <span>Instalar Aplicación Móvil</span>
+        </button>
+
+        <form action="/logout" method="POST">
+          <button type="submit" class="w-full h-12 flex items-center justify-center space-x-2 rounded-xl border border-slate-200 text-rose-700 hover:bg-rose-50 font-semibold text-sm">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+            </svg>
+            <span>Cerrar Sesión</span>
+          </button>
+        </form>
+      </div>
+    </div>
+
+  <% } else { %>
+    <!-- Layout para usuarios no autenticados (Login) -->
+    <main class="min-h-full flex items-center justify-center p-4">
+      <div class="w-full max-w-md">
+        <%- include('../partials/flash-messages') %>
+        <%- body %>
+      </div>
+    </main>
+  <% } %>
+
+  <!-- Banner Flotante Discreto de Instalación PWA (Oculto por defecto hasta beforeinstallprompt) -->
+  <div class="pwa-install-banner hidden fixed bottom-20 md:bottom-6 right-4 left-4 md:left-auto md:w-96 z-50 bg-slate-900 text-white p-4 rounded-2xl shadow-2xl border border-slate-800 transition transform animate-fade-in no-print">
+    <div class="flex items-start justify-between gap-3">
+      <div class="flex items-center space-x-3">
+        <div class="w-10 h-10 rounded-xl bg-white text-slate-900 flex items-center justify-center font-black text-base flex-shrink-0 shadow-sm">
+          C
+        </div>
+        <div>
+          <p class="text-sm font-bold leading-tight">Instalar Control Empresarial</p>
+          <p class="text-xs text-slate-400 mt-0.5">Accede a pantalla completa con un clic, sin navegador.</p>
+        </div>
+      </div>
+      <button type="button" class="pwa-dismiss-banner text-slate-400 hover:text-white p-1 rounded-lg">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+      </button>
+    </div>
+    <div class="mt-3 flex items-center space-x-2">
+      <button type="button" class="pwa-install-trigger flex-1 h-9 bg-white hover:bg-slate-100 text-slate-900 text-xs font-bold rounded-lg transition flex items-center justify-center space-x-1.5 shadow-sm">
+        <svg class="w-3.5 h-3.5 text-slate-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+        </svg>
+        <span>Instalar Ahora</span>
+      </button>
+      <button type="button" class="pwa-dismiss-banner px-3 h-9 text-slate-400 hover:text-white text-xs font-semibold rounded-lg transition">
+        Ahora no
+      </button>
+    </div>
+  </div>
+
+  <script src="/js/main.js"></script>
+  <script src="/js/pwa.js"></script>
+  <%- script %>
+</body>
+</html>

@@ -1,0 +1,168 @@
+<% if (currentUser) { %>
+<!-- Barra lateral de navegación para escritorio (Escritorio / Tablet grande) -->
+<aside id="desktop-sidebar" class="hidden md:flex flex-col w-64 bg-white border-r border-slate-200 min-h-screen p-5 justify-between select-none no-print">
+  <div>
+    <!-- Logo / Identidad de la Empresa -->
+    <div class="flex items-center space-x-3 mb-8 px-2">
+      <div class="w-10 h-10 rounded-xl bg-slate-900 text-white flex items-center justify-center font-bold text-lg shadow-sm">
+        C
+      </div>
+      <div>
+        <h1 class="text-base font-bold text-slate-900 leading-tight">CORONADO</h1>
+        <p class="text-xs text-slate-500 font-medium">Materiales & Logística</p>
+      </div>
+    </div>
+
+    <!-- Menú de Navegación según Rol -->
+    <nav class="space-y-1.5 text-sm font-medium">
+      
+      <% if (currentUser.rol === 'SOCIO' || currentUser.rol === 'ADMINISTRADOR') { %>
+        <!-- Enlace: Dashboard -->
+        <a href="/dashboard" class="flex items-center space-x-3 px-3.5 py-3 rounded-xl transition <%= currentPath === '/dashboard' ? 'bg-slate-900 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900' %>">
+          <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path>
+          </svg>
+          <span><%= currentUser.rol === 'SOCIO' ? 'Dashboard Financiero' : 'Panel Operativo' %></span>
+        </a>
+      <% } %>
+
+      <!-- Enlace: Cotizaciones y Ventas -->
+      <a href="/pedidos" class="flex items-center space-x-3 px-3.5 py-3 rounded-xl transition <%= currentPath.startsWith('/pedidos') && !currentPath.includes('comisiones') ? 'bg-slate-900 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900' %>">
+        <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+        </svg>
+        <span><%= currentUser.rol === 'VENDEDOR' ? 'Mis Cotizaciones' : 'Cotizaciones y Ventas' %></span>
+      </a>
+
+      <% if (currentUser.rol === 'VENDEDOR') { %>
+        <!-- Enlace: Nueva Cotización -->
+        <a href="/pedidos/nuevo" class="flex items-center space-x-3 px-3.5 py-3 rounded-xl transition <%= currentPath === '/pedidos/nuevo' ? 'bg-slate-900 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900' %>">
+          <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+          </svg>
+          <span>Nueva Cotización</span>
+        </a>
+      <% } %>
+
+      <!-- Enlace: Inventario (Para Socio y Administrador) -->
+      <% if (currentUser.rol === 'SOCIO' || currentUser.rol === 'ADMINISTRADOR') { %>
+        <a href="/productos" class="flex items-center space-x-3 px-3.5 py-3 rounded-xl transition <%= currentPath.startsWith('/productos') ? 'bg-slate-900 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900' %>">
+          <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
+          </svg>
+          <span>Inventario & Stock</span>
+        </a>
+      <% } %>
+
+      <!-- Enlace: Contactos (Clientes / Proveedores) -->
+      <a href="/contactos" class="flex items-center space-x-3 px-3.5 py-3 rounded-xl transition <%= currentPath.startsWith('/contactos') ? 'bg-slate-900 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900' %>">
+        <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+        </svg>
+        <span><%= currentUser.rol === 'VENDEDOR' ? 'Mis Clientes' : 'Clientes & Proveedores' %></span>
+      </a>
+
+      <!-- Enlace: Gastos (Solo Socio y Admin) -->
+      <% if (currentUser.rol === 'SOCIO' || currentUser.rol === 'ADMINISTRADOR') { %>
+        <a href="/gastos" class="flex items-center space-x-3 px-3.5 py-3 rounded-xl transition <%= currentPath.startsWith('/gastos') ? 'bg-slate-900 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900' %>">
+          <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path>
+          </svg>
+          <span>Centro de Gastos</span>
+        </a>
+      <% } %>
+
+      <!-- Sección de Administración de Recursos (Socio y Administrador) -->
+      <% if (currentUser.rol === 'SOCIO' || currentUser.rol === 'ADMINISTRADOR') { %>
+        <div class="pt-3 pb-1 px-3">
+          <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Administración</span>
+        </div>
+
+        <!-- Enlace: Gestión de Vehículos (Flota) -->
+        <a href="/vehiculos" class="flex items-center space-x-3 px-3.5 py-3 rounded-xl transition <%= currentPath === '/vehiculos' ? 'bg-slate-900 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900' %>">
+          <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path>
+          </svg>
+          <span>Flota de Vehículos</span>
+        </a>
+        <a href="/vehiculos/mapa" class="flex items-center space-x-2.5 px-3 py-2 ml-4 rounded-xl transition text-xs <%= currentPath === '/vehiculos/mapa' ? 'bg-slate-800 text-white font-bold' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-800 font-medium' %>">
+          <span>🛰️</span>
+          <span>Monitoreo GPS en Vivo</span>
+        </a>
+
+        <!-- Enlace: Gestión de Usuarios (Exclusivo Socio) -->
+        <% if (currentUser.rol === 'SOCIO') { %>
+          <a href="/usuarios" class="flex items-center space-x-3 px-3.5 py-3 rounded-xl transition <%= currentPath.startsWith('/usuarios') ? 'bg-slate-900 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900' %>">
+            <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path>
+            </svg>
+            <span>Usuarios & Personal</span>
+          </a>
+        <% } %>
+      <% } %>
+
+      <!-- Enlace: Comisiones (Para Vendedor) -->
+      <% if (currentUser.rol === 'VENDEDOR') { %>
+        <a href="/pedidos/comisiones" class="flex items-center space-x-3 px-3.5 py-3 rounded-xl transition <%= currentPath === '/pedidos/comisiones' ? 'bg-slate-900 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900' %>">
+          <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+          </svg>
+          <span>Mis Comisiones</span>
+        </a>
+      <% } %>
+
+      <!-- Enlace: Reportes (Todos los roles con control de acceso contextual) -->
+      <a href="/reportes" class="flex items-center space-x-3 px-3.5 py-3 rounded-xl transition <%= currentPath.startsWith('/reportes') ? 'bg-slate-900 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900' %>">
+        <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+        </svg>
+        <span>Reportes & Análisis</span>
+      </a>
+
+    </nav>
+  </div>
+
+  <!-- Pie de la Barra: Información del Usuario y Logout -->
+  <div class="pt-4 border-t border-slate-200">
+    <div class="flex items-center justify-between mb-3">
+      <div class="overflow-hidden pr-2">
+        <p class="text-xs font-bold text-slate-900 truncate"><%= currentUser.nombre %></p>
+        <div class="flex items-center space-x-1.5 mt-0.5">
+          <span class="inline-block w-2 h-2 rounded-full <%= currentUser.rol === 'SOCIO' ? 'bg-purple-600' : (currentUser.rol === 'ADMINISTRADOR' ? 'bg-blue-600' : 'bg-amber-600') %>"></span>
+          <span class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider"><%= currentUser.rol %></span>
+        </div>
+      </div>
+      <a href="/perfil/cambiar-clave" title="Mi Perfil y Seguridad" class="p-1.5 rounded-lg text-slate-400 hover:text-slate-900 hover:bg-slate-100 transition">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"></path>
+        </svg>
+      </a>
+    </div>
+
+    <!-- Enlace directo a Mi Perfil / Cambiar Clave -->
+    <a href="/perfil/cambiar-clave" class="flex items-center space-x-2.5 w-full mb-3 px-3 py-2 rounded-xl text-xs font-semibold <%= currentPath.startsWith('/perfil') ? 'bg-slate-900 text-white shadow-sm' : 'text-slate-700 bg-slate-50 hover:bg-slate-100 border border-slate-200/80' %> transition">
+      <svg class="w-4 h-4 <%= currentPath.startsWith('/perfil') ? 'text-white' : 'text-slate-500' %>" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"></path>
+      </svg>
+      <span>Mi Perfil & Contraseña</span>
+    </a>
+
+    <!-- Botón PWA Instalable en Escritorio (Oculto por defecto hasta beforeinstallprompt) -->
+    <button type="button" class="pwa-install-trigger hidden w-full mb-3 h-11 flex items-center justify-center space-x-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white transition text-xs font-bold shadow-sm">
+      <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+      </svg>
+      <span>Instalar Aplicación</span>
+    </button>
+
+    <form action="/logout" method="POST">
+      <button type="submit" class="w-full h-11 flex items-center justify-center space-x-2 rounded-xl border border-slate-200 text-slate-700 hover:bg-rose-50 hover:text-rose-700 hover:border-rose-200 transition text-xs font-semibold">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+        </svg>
+        <span>Cerrar Sesión</span>
+      </button>
+    </form>
+  </div>
+</aside>
+<% } %>

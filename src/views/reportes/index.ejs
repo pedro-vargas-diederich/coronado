@@ -1,0 +1,684 @@
+<div class="space-y-6">
+  
+  <!-- Cabecera de Página y Controles de Exportación (no-print) -->
+  <div class="no-print flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+    <div>
+      <div class="flex items-center space-x-2">
+        <h1 class="text-2xl font-bold text-slate-900 tracking-tight">Centro de Reportes y Análisis</h1>
+        <span class="px-2.5 py-0.5 rounded-full text-xs font-bold <%= userRole === 'SOCIO' ? 'bg-purple-100 text-purple-800' : (userRole === 'ADMINISTRADOR' ? 'bg-blue-100 text-blue-800' : 'bg-amber-100 text-amber-800') %>">
+          Rol: <%= userRole %>
+        </span>
+      </div>
+      <p class="text-sm text-slate-500 font-medium mt-0.5">Métricas financieras, operativas y de ventas consolidadas en tiempo real</p>
+    </div>
+
+    <!-- Botones de Acción de Salida -->
+    <div class="flex items-center gap-2">
+      <!-- Imprimir / PDF -->
+      <button 
+        type="button" 
+        onclick="window.print()" 
+        class="h-11 px-4 inline-flex items-center justify-center space-x-2 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 font-semibold text-xs shadow-sm transition"
+      >
+        <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path>
+        </svg>
+        <span>Imprimir / PDF</span>
+      </button>
+
+      <!-- Exportar CSV / Excel -->
+      <a 
+        href="/reportes/exportar-csv?tipo=<%= tipo %>&desde=<%= desde %>&hasta=<%= hasta %>" 
+        class="h-11 px-4 inline-flex items-center justify-center space-x-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs shadow-sm transition"
+      >
+        <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+        </svg>
+        <span>Exportar Excel (CSV)</span>
+      </a>
+    </div>
+  </div>
+
+  <!-- Encabezado Corporativo Exclusivo para Impresión (@media print) -->
+  <div class="hidden print:block border-b-2 border-slate-900 pb-4 mb-6">
+    <div class="flex justify-between items-start">
+      <div>
+        <h2 class="text-2xl font-black text-slate-900">DISTRIBUIDORA CORONADO</h2>
+        <p class="text-xs text-slate-600">Materiales de Construcción & Logística Industrial | NIT: 900.852.147-3</p>
+        <p class="text-xs text-slate-500">Tel: (601) 745-8900 | Zona Industrial El Sol, Bodega 12</p>
+      </div>
+      <div class="text-right">
+        <p class="text-base font-extrabold text-slate-900 uppercase">
+          <% if (tipo === 'financiero') { %>ESTADO DE RESULTADOS & UTILIDAD NETA<% } %>
+          <% if (tipo === 'ventas') { %>REPORTE CONSOLIDADO DE VENTAS Y FACTURACIÓN<% } %>
+          <% if (tipo === 'comisiones') { %>LIQUIDACIÓN Y BALANCE DE COMISIONES<% } %>
+          <% if (tipo === 'flota') { %>ANÁLISIS DE COSTOS LOGÍSTICOS & FLOTA<% } %>
+          <% if (tipo === 'cobrar') { %>ESTADO DE CARTERA Y CUENTAS POR COBRAR<% } %>
+        </p>
+        <p class="text-xs text-slate-600 font-medium mt-1">Período: <strong><%= formatDate(desde) %></strong> al <strong><%= formatDate(hasta) %></strong></p>
+        <p class="text-[11px] text-slate-400">Generado por: <%= currentUser ? currentUser.nombre : 'Sistema' %> (<%= userRole %>)</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Barra de Filtros Global (Rango de Fechas y Presets Rápidos) (no-print) -->
+  <div class="no-print bg-white border border-slate-200 rounded-2xl p-4 sm:p-5 shadow-sm space-y-4">
+    <form action="/reportes" method="GET" class="flex flex-col lg:flex-row lg:items-end justify-between gap-4">
+      <input type="hidden" name="tipo" value="<%= tipo %>">
+      
+      <!-- Presets Rápidos -->
+      <div class="space-y-1.5">
+        <label class="block text-xs font-bold uppercase tracking-wider text-slate-600">Períodos Frecuentes</label>
+        <div class="flex flex-wrap items-center gap-1.5">
+          <a href="/reportes?tipo=<%= tipo %>&preset=hoy" class="px-3 py-1.5 rounded-lg text-xs font-semibold border transition <%= preset === 'hoy' ? 'bg-slate-900 text-white border-slate-900' : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100' %>">
+            Hoy
+          </a>
+          <a href="/reportes?tipo=<%= tipo %>&preset=semana" class="px-3 py-1.5 rounded-lg text-xs font-semibold border transition <%= preset === 'semana' ? 'bg-slate-900 text-white border-slate-900' : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100' %>">
+            Esta Semana
+          </a>
+          <a href="/reportes?tipo=<%= tipo %>&preset=mes" class="px-3 py-1.5 rounded-lg text-xs font-semibold border transition <%= preset === 'mes' ? 'bg-slate-900 text-white border-slate-900' : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100' %>">
+            Este Mes
+          </a>
+          <a href="/reportes?tipo=<%= tipo %>&preset=anio" class="px-3 py-1.5 rounded-lg text-xs font-semibold border transition <%= preset === 'anio' ? 'bg-slate-900 text-white border-slate-900' : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100' %>">
+            Este Año
+          </a>
+        </div>
+      </div>
+
+      <!-- Selectores de Fecha y Botón Filtrar -->
+      <div class="flex flex-col sm:flex-row items-stretch sm:items-end gap-3">
+        <div>
+          <label for="filtro-desde" class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">Desde</label>
+          <input 
+            type="date" 
+            id="filtro-desde" 
+            name="desde" 
+            value="<%= desde %>" 
+            class="h-11 px-3 bg-slate-50 border border-slate-300 rounded-xl text-xs font-semibold text-slate-900 focus:bg-white focus:ring-2 focus:ring-slate-900 focus:outline-none w-full sm:w-40"
+          >
+        </div>
+
+        <div>
+          <label for="filtro-hasta" class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">Hasta</label>
+          <input 
+            type="date" 
+            id="filtro-hasta" 
+            name="hasta" 
+            value="<%= hasta %>" 
+            class="h-11 px-3 bg-slate-50 border border-slate-300 rounded-xl text-xs font-semibold text-slate-900 focus:bg-white focus:ring-2 focus:ring-slate-900 focus:outline-none w-full sm:w-40"
+          >
+        </div>
+
+        <button 
+          type="submit" 
+          class="h-11 px-6 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-xl shadow-sm transition flex items-center justify-center space-x-1.5"
+        >
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"></path>
+          </svg>
+          <span>Aplicar Filtro</span>
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Pestañas de Selección de Reportes (no-print) -->
+  <div class="no-print overflow-x-auto pb-1">
+    <div class="flex items-center space-x-2 border-b border-slate-200 min-w-max">
+      
+      <!-- Pestaña 1: Estado Financiero (Solo Socio) -->
+      <% if (userRole === 'SOCIO') { %>
+        <a 
+          href="/reportes?tipo=financiero&desde=<%= desde %>&hasta=<%= hasta %>" 
+          class="flex items-center space-x-2 px-4 py-3 border-b-2 font-bold text-xs sm:text-sm transition <%= tipo === 'financiero' ? 'border-slate-900 text-slate-900 bg-slate-100/70 rounded-t-xl' : 'border-transparent text-slate-500 hover:text-slate-900' %>"
+        >
+          <svg class="w-4 h-4 <%= tipo === 'financiero' ? 'text-purple-600' : 'text-slate-400' %>" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+          </svg>
+          <span>Utilidad & Estado Financiero</span>
+        </a>
+      <% } %>
+
+      <!-- Pestaña 2: Ventas y Facturación (Todos los roles) -->
+      <a 
+        href="/reportes?tipo=ventas&desde=<%= desde %>&hasta=<%= hasta %>" 
+        class="flex items-center space-x-2 px-4 py-3 border-b-2 font-bold text-xs sm:text-sm transition <%= tipo === 'ventas' ? 'border-slate-900 text-slate-900 bg-slate-100/70 rounded-t-xl' : 'border-transparent text-slate-500 hover:text-slate-900' %>"
+      >
+        <svg class="w-4 h-4 <%= tipo === 'ventas' ? 'text-blue-600' : 'text-slate-400' %>" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+        </svg>
+        <span><%= userRole === 'VENDEDOR' ? 'Mis Ventas Facturadas' : 'Ventas y Facturación' %></span>
+      </a>
+
+      <!-- Pestaña 3: Comisiones (Todos los roles) -->
+      <a 
+        href="/reportes?tipo=comisiones&desde=<%= desde %>&hasta=<%= hasta %>" 
+        class="flex items-center space-x-2 px-4 py-3 border-b-2 font-bold text-xs sm:text-sm transition <%= tipo === 'comisiones' ? 'border-slate-900 text-slate-900 bg-slate-100/70 rounded-t-xl' : 'border-transparent text-slate-500 hover:text-slate-900' %>"
+      >
+        <svg class="w-4 h-4 <%= tipo === 'comisiones' ? 'text-amber-600' : 'text-slate-400' %>" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path>
+        </svg>
+        <span><%= userRole === 'VENDEDOR' ? 'Mis Comisiones' : 'Comisiones de Venta' %></span>
+      </a>
+
+      <!-- Pestaña 4: Flota de Vehículos (Socio y Administrador) -->
+      <% if (userRole === 'SOCIO' || userRole === 'ADMINISTRADOR') { %>
+        <a 
+          href="/reportes?tipo=flota&desde=<%= desde %>&hasta=<%= hasta %>" 
+          class="flex items-center space-x-2 px-4 py-3 border-b-2 font-bold text-xs sm:text-sm transition <%= tipo === 'flota' ? 'border-slate-900 text-slate-900 bg-slate-100/70 rounded-t-xl' : 'border-transparent text-slate-500 hover:text-slate-900' %>"
+        >
+          <svg class="w-4 h-4 <%= tipo === 'flota' ? 'text-slate-800' : 'text-slate-400' %>" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path>
+          </svg>
+          <span>Costos de Flota y Logística</span>
+        </a>
+      <% } %>
+
+      <!-- Pestaña 5: Cuentas por Cobrar (Socio y Administrador) -->
+      <% if (userRole === 'SOCIO' || userRole === 'ADMINISTRADOR') { %>
+        <a 
+          href="/reportes?tipo=cobrar&desde=<%= desde %>&hasta=<%= hasta %>" 
+          class="flex items-center space-x-2 px-4 py-3 border-b-2 font-bold text-xs sm:text-sm transition <%= tipo === 'cobrar' ? 'border-slate-900 text-slate-900 bg-slate-100/70 rounded-t-xl' : 'border-transparent text-slate-500 hover:text-slate-900' %>"
+        >
+          <svg class="w-4 h-4 <%= tipo === 'cobrar' ? 'text-rose-600' : 'text-slate-400' %>" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+          </svg>
+          <span>Cuentas por Cobrar</span>
+        </a>
+      <% } %>
+
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- CONTENIDO: REPORTE 1 - ESTADO FINANCIERO Y UTILIDAD NETA (SOCIO)          -->
+  <!-- ========================================================================= -->
+  <% if (tipo === 'financiero' && userRole === 'SOCIO') { %>
+    <div class="space-y-6">
+      
+      <!-- Tarjeta Principal de Utilidad Neta Realtime -->
+      <div class="bg-slate-900 text-white rounded-3xl p-6 sm:p-8 shadow-xl relative overflow-hidden">
+        <div class="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+          <div>
+            <div class="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-slate-800 text-emerald-400 text-xs font-bold tracking-wider uppercase mb-3">
+              <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+              <span>Balance Financiero Directivo</span>
+            </div>
+            <p class="text-xs text-slate-400 font-semibold uppercase tracking-wider">Utilidad Neta Real en Período</p>
+            <h3 class="text-4xl sm:text-5xl font-black tracking-tight text-white mt-1">
+              <%= formatMoney(datos.utilidadNeta) %>
+            </h3>
+            <p class="text-xs text-slate-400 mt-2">
+              Margen Operativo sobre Cobros: <strong class="text-emerald-400 font-bold"><%= datos.margenPorcentaje %>%</strong>
+            </p>
+          </div>
+
+          <!-- Fórmula de Cálculo Desglosada -->
+          <div class="bg-slate-800/80 backdrop-blur rounded-2xl p-4 sm:p-5 border border-slate-700 text-xs space-y-2 min-w-[280px]">
+            <p class="font-bold text-slate-300 uppercase tracking-wider text-[11px] pb-1 border-b border-slate-700">Fórmula de Liquidación:</p>
+            <div class="flex justify-between text-emerald-400">
+              <span>(+) Ventas Cobradas:</span>
+              <span class="font-bold font-mono"><%= formatMoney(datos.ventasCobradas) %></span>
+            </div>
+            <div class="flex justify-between text-rose-300">
+              <span>(-) Costo de Mercancía:</span>
+              <span class="font-bold font-mono"><%= formatMoney(datos.costoMercancia) %></span>
+            </div>
+            <div class="flex justify-between text-amber-300">
+              <span>(-) Comisiones Vendedores:</span>
+              <span class="font-bold font-mono"><%= formatMoney(datos.comisiones) %></span>
+            </div>
+            <div class="flex justify-between text-rose-300">
+              <span>(-) Gastos Operativos:</span>
+              <span class="font-bold font-mono"><%= formatMoney(datos.gastosOperativos) %></span>
+            </div>
+            <div class="pt-2 border-t border-slate-700 flex justify-between font-bold text-white text-sm">
+              <span>(=) Utilidad Neta:</span>
+              <span class="font-mono text-emerald-400"><%= formatMoney(datos.utilidadNeta) %></span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Cuadrícula de Métricas de Soporte -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-1">
+          <p class="text-xs font-bold uppercase tracking-wider text-slate-500">Ventas Cobradas</p>
+          <p class="text-2xl font-black text-slate-900"><%= formatMoney(datos.ventasCobradas) %></p>
+          <p class="text-xs text-slate-500">Efectivo y transferencias verificadas</p>
+        </div>
+
+        <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-1">
+          <p class="text-xs font-bold uppercase tracking-wider text-amber-600">Ventas a Crédito Pendientes</p>
+          <p class="text-2xl font-black text-slate-900"><%= formatMoney(datos.ventasPendientes) %></p>
+          <p class="text-xs text-slate-500">Pendiente de ingreso a caja</p>
+        </div>
+
+        <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-1">
+          <p class="text-xs font-bold uppercase tracking-wider text-slate-500">Costo de Mercancía</p>
+          <p class="text-2xl font-black text-slate-900"><%= formatMoney(datos.costoMercancia) %></p>
+          <p class="text-xs text-slate-500">Costo histórico de adquisición</p>
+        </div>
+
+        <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-1">
+          <p class="text-xs font-bold uppercase tracking-wider text-slate-500">Gastos Totales</p>
+          <p class="text-2xl font-black text-slate-900"><%= formatMoney(datos.gastosOperativos) %></p>
+          <p class="text-xs text-slate-500">Combustible, taller y operación</p>
+        </div>
+      </div>
+
+      <!-- Desglose de Gastos por Categoría -->
+      <div class="bg-white border border-slate-200 rounded-2xl p-5 sm:p-6 shadow-sm space-y-4">
+        <h4 class="text-base font-bold text-slate-900">Distribución de Gastos Operativos</h4>
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse text-xs sm:text-sm">
+            <thead>
+              <tr class="bg-slate-50 border-b border-slate-200 text-xs font-bold text-slate-600 uppercase">
+                <th class="py-3 px-4">Categoría del Gasto</th>
+                <th class="py-3 px-4 text-center">Registros</th>
+                <th class="py-3 px-4 text-right">Monto Total</th>
+                <th class="py-3 px-4 text-right">% del Total</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100">
+              <% if (datos.gastosPorCategoria.length === 0) { %>
+                <tr><td colspan="4" class="py-6 text-center text-slate-400">Sin gastos registrados en el rango de fechas.</td></tr>
+              <% } %>
+              <% datos.gastosPorCategoria.forEach(function(g) { 
+                   const pct = datos.gastosOperativos > 0 ? ((g.total / datos.gastosOperativos) * 100).toFixed(1) : '0.0';
+              %>
+                <tr class="hover:bg-slate-50/60">
+                  <td class="py-3.5 px-4 font-bold text-slate-800"><%= g.categoria.replace('_', ' ') %></td>
+                  <td class="py-3.5 px-4 text-center text-slate-600 font-mono"><%= g.cantidad %></td>
+                  <td class="py-3.5 px-4 text-right font-black text-slate-900"><%= formatMoney(g.total) %></td>
+                  <td class="py-3.5 px-4 text-right font-semibold text-slate-500"><%= pct %>%</td>
+                </tr>
+              <% }); %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  <% } %>
+
+  <!-- ========================================================================= -->
+  <!-- CONTENIDO: REPORTE 2 - VENTAS Y FACTURACIÓN                               -->
+  <!-- ========================================================================= -->
+  <% if (tipo === 'ventas') { %>
+    <div class="space-y-6">
+      
+      <!-- Resumen Cuantitativo de Ventas -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-1">
+          <p class="text-xs font-bold uppercase tracking-wider text-slate-500">Total Facturado</p>
+          <p class="text-3xl font-black text-slate-900"><%= formatMoney(datos.resumen.monto_total) %></p>
+          <p class="text-xs text-slate-500"><%= datos.resumen.total_pedidos %> transacciones registradas</p>
+        </div>
+
+        <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-1">
+          <p class="text-xs font-bold uppercase tracking-wider text-emerald-600">Contado y Pagadas</p>
+          <p class="text-3xl font-black text-emerald-700"><%= formatMoney(datos.resumen.total_cobrado) %></p>
+          <p class="text-xs text-slate-500">Efectivo + Transferencia</p>
+        </div>
+
+        <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-1">
+          <p class="text-xs font-bold uppercase tracking-wider text-amber-600">Crédito Comercial</p>
+          <p class="text-3xl font-black text-amber-700"><%= formatMoney(datos.resumen.total_credito) %></p>
+          <p class="text-xs text-slate-500">Pendiente de cobro en cartera</p>
+        </div>
+
+        <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-1">
+          <p class="text-xs font-bold uppercase tracking-wider text-blue-600">Ticket Promedio</p>
+          <% const promedio = datos.resumen.total_pedidos > 0 ? (datos.resumen.monto_total / datos.resumen.total_pedidos) : 0; %>
+          <p class="text-3xl font-black text-blue-700"><%= formatMoney(promedio) %></p>
+          <p class="text-xs text-slate-500">Por venta efectuada</p>
+        </div>
+      </div>
+
+      <!-- Ranking de Productos Más Vendidos -->
+      <div class="bg-white border border-slate-200 rounded-2xl p-5 sm:p-6 shadow-sm space-y-4">
+        <h4 class="text-base font-bold text-slate-900">Materiales y Productos más Vendidos</h4>
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse text-xs sm:text-sm">
+            <thead>
+              <tr class="bg-slate-50 border-b border-slate-200 text-xs font-bold text-slate-600 uppercase">
+                <th class="py-3 px-4">SKU</th>
+                <th class="py-3 px-4">Descripción del Material</th>
+                <th class="py-3 px-4 text-center">Unidad</th>
+                <th class="py-3 px-4 text-right">Cantidad Despachada</th>
+                <th class="py-3 px-4 text-right">Recaudación Total (Bs)</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100">
+              <% if (datos.productosVendidos.length === 0) { %>
+                <tr><td colspan="5" class="py-6 text-center text-slate-400">Sin ventas en el período especificado.</td></tr>
+              <% } %>
+              <% datos.productosVendidos.forEach(function(p) { %>
+                <tr class="hover:bg-slate-50/60">
+                  <td class="py-3.5 px-4 font-mono text-slate-500"><%= p.codigo_sku %></td>
+                  <td class="py-3.5 px-4 font-bold text-slate-900"><%= p.nombre %></td>
+                  <td class="py-3.5 px-4 text-center text-slate-600 font-semibold"><%= p.unidad_medida %></td>
+                  <td class="py-3.5 px-4 text-right font-bold text-slate-800"><%= Number(p.cantidad_total).toFixed(2) %></td>
+                  <td class="py-3.5 px-4 text-right font-black text-slate-900"><%= formatMoney(p.monto_total) %></td>
+                </tr>
+              <% }); %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Listado Detallado de Ventas en el Período -->
+      <div class="bg-white border border-slate-200 rounded-2xl p-5 sm:p-6 shadow-sm space-y-4">
+        <h4 class="text-base font-bold text-slate-900">Listado Cronológico de Ventas</h4>
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse text-xs sm:text-sm">
+            <thead>
+              <tr class="bg-slate-50 border-b border-slate-200 text-xs font-bold text-slate-600 uppercase">
+                <th class="py-3 px-4">Código</th>
+                <th class="py-3 px-4">Fecha</th>
+                <th class="py-3 px-4">Cliente</th>
+                <th class="py-3 px-4">Asesor</th>
+                <th class="py-3 px-4 text-center">Método</th>
+                <th class="py-3 px-4 text-center">Estado</th>
+                <th class="py-3 px-4 text-right">Total</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100">
+              <% if (datos.listaVentas.length === 0) { %>
+                <tr><td colspan="7" class="py-6 text-center text-slate-400">No se encontraron ventas para este rango.</td></tr>
+              <% } %>
+              <% datos.listaVentas.forEach(function(v) { %>
+                <tr class="hover:bg-slate-50/60">
+                  <td class="py-3.5 px-4 font-mono font-bold text-slate-900">
+                    <a href="/pedidos/ver/<%= v.id %>" class="hover:underline text-slate-900"><%= v.codigo_orden %></a>
+                  </td>
+                  <td class="py-3.5 px-4 text-slate-600"><%= formatDate(v.creado_en) %></td>
+                  <td class="py-3.5 px-4 font-semibold text-slate-800"><%= v.cliente_nombre %></td>
+                  <td class="py-3.5 px-4 text-slate-600"><%= v.vendedor_nombre %></td>
+                  <td class="py-3.5 px-4 text-center">
+                    <span class="px-2 py-0.5 rounded text-[11px] font-bold <%= v.metodo_pago === 'CREDITO' ? 'bg-amber-100 text-amber-800' : 'bg-slate-100 text-slate-800' %>">
+                      <%= v.metodo_pago %>
+                    </span>
+                  </td>
+                  <td class="py-3.5 px-4 text-center">
+                    <span class="px-2 py-0.5 rounded-full text-[11px] font-bold <%= v.estado === 'PAGADO' ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800' %>">
+                      <%= v.estado %>
+                    </span>
+                  </td>
+                  <td class="py-3.5 px-4 text-right font-black text-slate-900"><%= formatMoney(v.total) %></td>
+                </tr>
+              <% }); %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  <% } %>
+
+  <!-- ========================================================================= -->
+  <!-- CONTENIDO: REPORTE 3 - COMISIONES DE VENTA                                -->
+  <!-- ========================================================================= -->
+  <% if (tipo === 'comisiones') { %>
+    <div class="space-y-6">
+      
+      <!-- Tarjetas de Resumen de Comisiones -->
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-1">
+          <p class="text-xs font-bold uppercase tracking-wider text-slate-500">Total Comisiones Devengadas</p>
+          <p class="text-3xl font-black text-slate-900"><%= formatMoney(datos.resumen.total_devengado) %></p>
+          <p class="text-xs text-slate-500"><%= datos.resumen.total_operaciones || datos.resumen.total_comisiones %> transacciones comisionables</p>
+        </div>
+
+        <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-1">
+          <p class="text-xs font-bold uppercase tracking-wider text-emerald-600">Comisiones Liquidadas / Pagadas</p>
+          <p class="text-3xl font-black text-emerald-700"><%= formatMoney(datos.resumen.total_liquidado) %></p>
+          <p class="text-xs text-slate-500">Pagadas a los asesores comerciales</p>
+        </div>
+
+        <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-1">
+          <p class="text-xs font-bold uppercase tracking-wider text-amber-600">Comisiones Pendientes</p>
+          <p class="text-3xl font-black text-amber-700"><%= formatMoney(datos.resumen.total_pendiente) %></p>
+          <p class="text-xs text-slate-500">Pendientes por liquidar</p>
+        </div>
+      </div>
+
+      <% if (!datos.esIndividual) { %>
+        <!-- Tabla Resumen por Asesor Comercial (Socio / Admin) -->
+        <div class="bg-white border border-slate-200 rounded-2xl p-5 sm:p-6 shadow-sm space-y-4">
+          <h4 class="text-base font-bold text-slate-900">Rendimiento por Asesor Comercial</h4>
+          <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse text-xs sm:text-sm">
+              <thead>
+                <tr class="bg-slate-50 border-b border-slate-200 text-xs font-bold text-slate-600 uppercase">
+                  <th class="py-3 px-4">Asesor Comercial</th>
+                  <th class="py-3 px-4 text-center">% Comisión</th>
+                  <th class="py-3 px-4 text-center">Operaciones</th>
+                  <th class="py-3 px-4 text-right">Total Devengado</th>
+                  <th class="py-3 px-4 text-right">Liquidado (Pagado)</th>
+                  <th class="py-3 px-4 text-right">Saldo Pendiente</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-100">
+                <% datos.porVendedor.forEach(function(v) { %>
+                  <tr class="hover:bg-slate-50/60">
+                    <td class="py-3.5 px-4 font-bold text-slate-900"><%= v.vendedor_nombre %></td>
+                    <td class="py-3.5 px-4 text-center font-bold text-slate-700"><%= Number(v.porcentaje_comision).toFixed(2) %>%</td>
+                    <td class="py-3.5 px-4 text-center font-mono text-slate-600"><%= v.total_operaciones %></td>
+                    <td class="py-3.5 px-4 text-right font-black text-slate-900"><%= formatMoney(v.total_comisiones) %></td>
+                    <td class="py-3.5 px-4 text-right font-semibold text-emerald-700"><%= formatMoney(v.total_liquidado) %></td>
+                    <td class="py-3.5 px-4 text-right font-bold text-amber-700"><%= formatMoney(v.total_pendiente) %></td>
+                  </tr>
+                <% }); %>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      <% } else { %>
+        <!-- Tabla Detallada para Asesor Individual (Vendedor) -->
+        <div class="bg-white border border-slate-200 rounded-2xl p-5 sm:p-6 shadow-sm space-y-4">
+          <h4 class="text-base font-bold text-slate-900">Detalle de mis Comisiones Devengadas</h4>
+          <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse text-xs sm:text-sm">
+              <thead>
+                <tr class="bg-slate-50 border-b border-slate-200 text-xs font-bold text-slate-600 uppercase">
+                  <th class="py-3 px-4">Venta</th>
+                  <th class="py-3 px-4">Fecha</th>
+                  <th class="py-3 px-4 text-right">Total Venta</th>
+                  <th class="py-3 px-4 text-right">Mi Comisión (Bs)</th>
+                  <th class="py-3 px-4 text-center">Estado</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-100">
+                <% if (datos.detalle.length === 0) { %>
+                  <tr><td colspan="5" class="py-6 text-center text-slate-400">No tienes comisiones en este rango de fechas.</td></tr>
+                <% } %>
+                <% datos.detalle.forEach(function(c) { %>
+                  <tr class="hover:bg-slate-50/60">
+                    <td class="py-3.5 px-4 font-mono font-bold text-slate-900">
+                      <a href="/pedidos/ver/<%= c.pedido_id %>" class="hover:underline"><%= c.codigo_orden %></a>
+                    </td>
+                    <td class="py-3.5 px-4 text-slate-600"><%= formatDate(c.fecha_comision) %></td>
+                    <td class="py-3.5 px-4 text-right font-semibold text-slate-800"><%= formatMoney(c.total_venta) %></td>
+                    <td class="py-3.5 px-4 text-right font-black text-slate-900"><%= formatMoney(c.monto) %></td>
+                    <td class="py-3.5 px-4 text-center">
+                      <span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold <%= c.estado === 'PAGADO' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800' %>">
+                        <%= c.estado %>
+                      </span>
+                    </td>
+                  </tr>
+                <% }); %>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      <% } %>
+
+    </div>
+  <% } %>
+
+  <!-- ========================================================================= -->
+  <!-- CONTENIDO: REPORTE 4 - COSTOS DE TRANSPORTE Y FLOTA (SOCIO / ADMIN)        -->
+  <!-- ========================================================================= -->
+  <% if (tipo === 'flota' && (userRole === 'SOCIO' || userRole === 'ADMINISTRADOR')) { %>
+    <div class="space-y-6">
+      
+      <!-- Resumen de Costos Logísticos -->
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-1">
+          <p class="text-xs font-bold uppercase tracking-wider text-slate-500">Gasto Total en Flota</p>
+          <p class="text-3xl font-black text-slate-900"><%= formatMoney(datos.resumen.total_gastos) %></p>
+          <p class="text-xs text-slate-500"><%= datos.resumen.cantidad_registros %> comprobantes de gasto</p>
+        </div>
+
+        <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-1">
+          <p class="text-xs font-bold uppercase tracking-wider text-amber-600">Combustible Total</p>
+          <p class="text-3xl font-black text-amber-700"><%= formatMoney(datos.resumen.total_combustible) %></p>
+          <p class="text-xs text-slate-500">Diesel / Gasolina operacional</p>
+        </div>
+
+        <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-1">
+          <p class="text-xs font-bold uppercase tracking-wider text-blue-600">Mantenimiento y Repuestos</p>
+          <p class="text-3xl font-black text-blue-700"><%= formatMoney(datos.resumen.total_mantenimiento) %></p>
+          <p class="text-xs text-slate-500">Taller mecánico y reparaciones</p>
+        </div>
+      </div>
+
+      <!-- Costos Desglosados por Cada Vehículo -->
+      <div class="bg-white border border-slate-200 rounded-2xl p-5 sm:p-6 shadow-sm space-y-4">
+        <h4 class="text-base font-bold text-slate-900">Consolidado por Unidad de Transporte</h4>
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse text-xs sm:text-sm">
+            <thead>
+              <tr class="bg-slate-50 border-b border-slate-200 text-xs font-bold text-slate-600 uppercase">
+                <th class="py-3 px-4">Placa</th>
+                <th class="py-3 px-4">Modelo / Tipo</th>
+                <th class="py-3 px-4">Conductor Habitual</th>
+                <th class="py-3 px-4 text-right">Combustible</th>
+                <th class="py-3 px-4 text-right">Mantenimiento</th>
+                <th class="py-3 px-4 text-right">Total Acumulado</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100">
+              <% if (datos.porVehiculo.length === 0) { %>
+                <tr><td colspan="6" class="py-6 text-center text-slate-400">No hay vehículos registrados en la flota.</td></tr>
+              <% } %>
+              <% datos.porVehiculo.forEach(function(v) { %>
+                <tr class="hover:bg-slate-50/60">
+                  <td class="py-3.5 px-4 font-mono font-black text-slate-900"><%= v.placa %></td>
+                  <td class="py-3.5 px-4 font-semibold text-slate-800"><%= v.modelo %></td>
+                  <td class="py-3.5 px-4 text-slate-600"><%= v.conductor_asignado %></td>
+                  <td class="py-3.5 px-4 text-right font-medium text-slate-700"><%= formatMoney(v.gasto_combustible) %></td>
+                  <td class="py-3.5 px-4 text-right font-medium text-slate-700"><%= formatMoney(v.gasto_mantenimiento) %></td>
+                  <td class="py-3.5 px-4 text-right font-black text-slate-900"><%= formatMoney(v.total_gastos) %></td>
+                </tr>
+              <% }); %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  <% } %>
+
+  <!-- ========================================================================= -->
+  <!-- CONTENIDO: REPORTE 5 - CUENTAS POR COBRAR (SOCIO / ADMIN)                  -->
+  <!-- ========================================================================= -->
+  <% if (tipo === 'cobrar' && (userRole === 'SOCIO' || userRole === 'ADMINISTRADOR')) { %>
+    <div class="space-y-6">
+      
+      <!-- Resumen de Cartera -->
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-1">
+          <p class="text-xs font-bold uppercase tracking-wider text-slate-500">Cartera Total Pendiente</p>
+          <p class="text-3xl font-black text-slate-900"><%= formatMoney(datos.resumen.monto_total_pendiente) %></p>
+          <p class="text-xs text-slate-500"><%= datos.resumen.total_facturas %> ventas con saldo abierto</p>
+        </div>
+
+        <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-1">
+          <p class="text-xs font-bold uppercase tracking-wider text-rose-600">Cartera Vencida (En Mora)</p>
+          <p class="text-3xl font-black text-rose-700"><%= formatMoney(datos.resumen.cartera_vencida) %></p>
+          <p class="text-xs text-rose-600 font-medium">Facturas con plazo de pago superado</p>
+        </div>
+
+        <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-1">
+          <p class="text-xs font-bold uppercase tracking-wider text-emerald-600">Cartera Vigente (Al Día)</p>
+          <p class="text-3xl font-black text-emerald-700"><%= formatMoney(datos.resumen.cartera_al_dia) %></p>
+          <p class="text-xs text-slate-500">Dentro del plazo convenido</p>
+        </div>
+      </div>
+
+      <!-- Listado Detallado de Saldos Pendientes -->
+      <div class="bg-white border border-slate-200 rounded-2xl p-5 sm:p-6 shadow-sm space-y-4">
+        <h4 class="text-base font-bold text-slate-900">Detalle de Créditos y Días de Retraso</h4>
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse text-xs sm:text-sm">
+            <thead>
+              <tr class="bg-slate-50 border-b border-slate-200 text-xs font-bold text-slate-600 uppercase">
+                <th class="py-3 px-4">Venta</th>
+                <th class="py-3 px-4">Cliente / Razón Social</th>
+                <th class="py-3 px-4">Teléfono</th>
+                <th class="py-3 px-4">Vencimiento</th>
+                <th class="py-3 px-4 text-center">Días Retraso</th>
+                <th class="py-3 px-4 text-right">Saldo Pendiente (Bs)</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100">
+              <% if (datos.cuentas.length === 0) { %>
+                <tr><td colspan="6" class="py-6 text-center text-emerald-700 font-semibold">¡Excelente! No hay cuentas por cobrar pendientes.</td></tr>
+              <% } %>
+              <% datos.cuentas.forEach(function(c) { 
+                   const esVencido = c.dias_retraso > 0;
+              %>
+                <tr class="hover:bg-slate-50/60">
+                  <td class="py-3.5 px-4 font-mono font-bold text-slate-900">
+                    <a href="/pedidos/ver/<%= c.id %>" class="hover:underline"><%= c.codigo_orden %></a>
+                  </td>
+                  <td class="py-3.5 px-4 font-bold text-slate-900"><%= c.cliente_nombre %></td>
+                  <td class="py-3.5 px-4 text-slate-600 font-mono"><%= c.cliente_telefono || '-' %></td>
+                  <td class="py-3.5 px-4 text-slate-600"><%= c.fecha_vencimiento ? formatDate(c.fecha_vencimiento) : 'Inmediato' %></td>
+                  <td class="py-3.5 px-4 text-center">
+                    <% if (esVencido) { %>
+                      <span class="inline-block px-2.5 py-0.5 rounded-full text-xs font-black bg-rose-100 text-rose-800">
+                        <%= c.dias_retraso %> días vencido
+                      </span>
+                    <% } else { %>
+                      <span class="inline-block px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800">
+                        Al día (<%= Math.abs(c.dias_retraso) %> d restantes)
+                      </span>
+                    <% } %>
+                  </td>
+                  <td class="py-3.5 px-4 text-right font-black <%= esVencido ? 'text-rose-700' : 'text-slate-900' %>">
+                    <%= formatMoney(c.total) %>
+                  </td>
+                </tr>
+              <% }); %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  <% } %>
+
+  <!-- Pie de Firma en Impresión (@media print) -->
+  <div class="hidden print:grid grid-cols-3 gap-6 pt-16 mt-12 text-center text-xs text-slate-600 border-t border-slate-300">
+    <div>
+      <div class="border-t border-slate-400 w-44 mx-auto mb-1"></div>
+      <p class="font-bold text-slate-900">Elaborado por</p>
+      <p><%= currentUser ? currentUser.nombre : 'Usuario' %></p>
+    </div>
+    <div>
+      <div class="border-t border-slate-400 w-44 mx-auto mb-1"></div>
+      <p class="font-bold text-slate-900">Revisado / Contabilidad</p>
+      <p>Control Interno</p>
+    </div>
+    <div>
+      <div class="border-t border-slate-400 w-44 mx-auto mb-1"></div>
+      <p class="font-bold text-slate-900">Aprobación Directiva</p>
+      <p>Gerencia General</p>
+    </div>
+  </div>
+
+</div>

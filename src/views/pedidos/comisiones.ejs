@@ -1,0 +1,132 @@
+<div class="space-y-6">
+  <!-- Cabecera de Página -->
+  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div>
+      <h1 class="text-2xl font-bold text-slate-900 tracking-tight">
+        <%= userRole === 'VENDEDOR' ? 'Mis Comisiones Comerciales' : 'Control de Comisiones a Vendedores' %>
+      </h1>
+      <p class="text-sm text-slate-500 font-medium">Liquidación sobre ventas cerradas y estado de desembolso</p>
+    </div>
+  </div>
+
+  <!-- Tarjetas de Resumen Financiero de Comisiones -->
+  <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+    <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-1">
+      <span class="text-xs font-bold uppercase tracking-wider text-amber-700">Comisiones Pendientes</span>
+      <p class="text-2xl sm:text-3xl font-extrabold text-slate-900"><%= formatMoney(totalPendiente) %></p>
+      <p class="text-xs text-slate-500">Por liquidar y desembolsar</p>
+    </div>
+
+    <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-1">
+      <span class="text-xs font-bold uppercase tracking-wider text-emerald-700">Comisiones Pagadas</span>
+      <p class="text-2xl sm:text-3xl font-extrabold text-slate-900"><%= formatMoney(totalPagado) %></p>
+      <p class="text-xs text-slate-500">Histórico desembolsado</p>
+    </div>
+  </div>
+
+  <!-- Vista Móvil: Tarjetas (block md:hidden) -->
+  <div class="grid grid-cols-1 gap-3 md:hidden">
+    <% if (comisiones.length === 0) { %>
+      <div class="p-8 text-center bg-white rounded-2xl border border-slate-200 text-slate-500 text-sm">
+        No hay registros de comisiones acumuladas.
+      </div>
+    <% } %>
+
+    <% comisiones.forEach(function(item) { %>
+      <div class="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm space-y-3">
+        <div class="flex items-start justify-between">
+          <div>
+            <span class="font-mono text-xs font-bold text-slate-900"><%= item.codigo_orden %></span>
+            <p class="text-xs text-slate-500">Venta: <%= formatMoney(item.total_venta) %></p>
+          </div>
+          <span class="text-xs font-bold px-2 py-0.5 rounded-full border <%= item.estado === 'PAGADO' ? 'bg-emerald-50 text-emerald-800 border-emerald-200' : 'bg-amber-50 text-amber-800 border-amber-200' %>">
+            <%= item.estado %>
+          </span>
+        </div>
+
+        <div class="flex items-center justify-between pt-2 border-t border-slate-100 text-sm">
+          <div>
+            <% if (userRole !== 'VENDEDOR') { %>
+              <p class="text-xs text-slate-500">Asesor: <strong class="text-slate-800"><%= item.vendedor_nombre %></strong></p>
+            <% } %>
+            <p class="text-xs text-slate-500">Fecha: <%= formatDate(item.fecha_venta) %></p>
+          </div>
+          <div class="text-right">
+            <span class="text-xs text-slate-500">Comisión:</span>
+            <p class="text-lg font-black text-slate-900"><%= formatMoney(item.monto) %></p>
+          </div>
+        </div>
+
+        <% if (userRole !== 'VENDEDOR' && item.estado === 'PENDIENTE') { %>
+          <div class="pt-2 border-t border-slate-100">
+            <form action="/pedidos/comisiones/pagar/<%= item.id %>" method="POST">
+              <button type="submit" class="w-full h-10 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-sm transition">
+                Marcar como Pagada
+              </button>
+            </form>
+          </div>
+        <% } %>
+      </div>
+    <% }); %>
+  </div>
+
+  <!-- Vista Escritorio: Tabla (hidden md:table) -->
+  <div class="hidden md:block bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+    <div class="overflow-x-auto">
+      <table class="w-full text-left border-collapse text-sm">
+        <thead>
+          <tr class="bg-slate-50/80 border-b border-slate-200 text-xs font-bold text-slate-600 uppercase tracking-wider">
+            <th class="py-3.5 px-4">Orden de Venta</th>
+            <% if (userRole !== 'VENDEDOR') { %>
+              <th class="py-3.5 px-4">Asesor Comercial</th>
+            <% } %>
+            <th class="py-3.5 px-4 text-right">Monto Venta</th>
+            <th class="py-3.5 px-4 text-right">Monto Comisión</th>
+            <th class="py-3.5 px-4">Fecha Generación</th>
+            <th class="py-3.5 px-4 text-center">Estado</th>
+            <% if (userRole !== 'VENDEDOR') { %>
+              <th class="py-3.5 px-4 text-center">Acciones</th>
+            <% } %>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+          <% if (comisiones.length === 0) { %>
+            <tr>
+              <td colspan="7" class="py-8 text-center text-slate-500">No hay comisiones registradas.</td>
+            </tr>
+          <% } %>
+
+          <% comisiones.forEach(function(item) { %>
+            <tr class="hover:bg-slate-50/60 transition">
+              <td class="py-3.5 px-4 font-mono font-bold text-slate-900"><%= item.codigo_orden %></td>
+              <% if (userRole !== 'VENDEDOR') { %>
+                <td class="py-3.5 px-4 font-semibold text-slate-800"><%= item.vendedor_nombre %></td>
+              <% } %>
+              <td class="py-3.5 px-4 text-right font-medium text-slate-600"><%= formatMoney(item.total_venta) %></td>
+              <td class="py-3.5 px-4 text-right font-black text-slate-900"><%= formatMoney(item.monto) %></td>
+              <td class="py-3.5 px-4 text-slate-600"><%= formatDate(item.fecha_venta) %></td>
+              <td class="py-3.5 px-4 text-center">
+                <span class="inline-block px-2.5 py-0.5 rounded-full text-xs font-bold <%= item.estado === 'PAGADO' ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' : 'bg-amber-50 text-amber-800 border border-amber-200' %>">
+                  <%= item.estado %>
+                </span>
+              </td>
+              <% if (userRole !== 'VENDEDOR') { %>
+                <td class="py-3.5 px-4 text-center">
+                  <% if (item.estado === 'PENDIENTE') { %>
+                    <form action="/pedidos/comisiones/pagar/<%= item.id %>" method="POST" class="inline">
+                      <button type="submit" class="px-3 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-bold text-xs border border-emerald-200 transition">
+                        Pagar
+                      </button>
+                    </form>
+                  <% } else { %>
+                    <span class="text-xs text-slate-400 font-medium">Liquidado</span>
+                  <% } %>
+                </td>
+              <% } %>
+            </tr>
+          <% }); %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>

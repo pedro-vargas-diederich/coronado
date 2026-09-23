@@ -1,0 +1,152 @@
+<div class="space-y-6">
+  <!-- Cabecera de Página -->
+  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div>
+      <h1 class="text-2xl font-bold text-slate-900 tracking-tight">Centro de Gastos Operativos</h1>
+      <p class="text-sm text-slate-500 font-medium">Control de egresos, combustible, mantenimiento de flota y servicios</p>
+    </div>
+    <div>
+      <a href="/gastos/nuevo" class="inline-flex items-center justify-center space-x-2 h-12 px-5 bg-slate-900 hover:bg-slate-800 text-white text-sm font-semibold rounded-xl shadow-sm transition w-full sm:w-auto">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"></path>
+        </svg>
+        <span>Registrar Gasto</span>
+      </a>
+    </div>
+  </div>
+
+  <!-- Resumen Rápido -->
+  <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+    <div>
+      <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Total Egresos en la Vista</span>
+      <p class="text-2xl sm:text-3xl font-extrabold text-slate-900"><%= formatMoney(totalGastos) %></p>
+    </div>
+    <div class="text-xs text-slate-500">
+      Egresos imputados a la operación y centro de costos de transporte.
+    </div>
+  </div>
+
+  <!-- Filtros por Categoría -->
+  <div class="flex items-center space-x-2 border-b border-slate-200 pb-3 overflow-x-auto text-sm">
+    <a href="/gastos?categoria=TODAS" class="px-3.5 py-1.5 rounded-xl font-medium transition whitespace-nowrap <%= filtroCategoria === 'TODAS' ? 'bg-slate-900 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100' %>">
+      Todas
+    </a>
+    <a href="/gastos?categoria=COMBUSTIBLE" class="px-3.5 py-1.5 rounded-xl font-medium transition whitespace-nowrap <%= filtroCategoria === 'COMBUSTIBLE' ? 'bg-slate-900 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100' %>">
+      Combustible
+    </a>
+    <a href="/gastos?categoria=MANTENIMIENTO_VEHICULO" class="px-3.5 py-1.5 rounded-xl font-medium transition whitespace-nowrap <%= filtroCategoria === 'MANTENIMIENTO_VEHICULO' ? 'bg-slate-900 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100' %>">
+      Mantenimiento Flota
+    </a>
+    <a href="/gastos?categoria=ALQUILER" class="px-3.5 py-1.5 rounded-xl font-medium transition whitespace-nowrap <%= filtroCategoria === 'ALQUILER' ? 'bg-slate-900 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100' %>">
+      Alquiler
+    </a>
+    <a href="/gastos?categoria=SERVICIOS_BASICOS" class="px-3.5 py-1.5 rounded-xl font-medium transition whitespace-nowrap <%= filtroCategoria === 'SERVICIOS_BASICOS' ? 'bg-slate-900 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100' %>">
+      Servicios
+    </a>
+    <a href="/gastos?categoria=NOMINA" class="px-3.5 py-1.5 rounded-xl font-medium transition whitespace-nowrap <%= filtroCategoria === 'NOMINA' ? 'bg-slate-900 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100' %>">
+      Nómina
+    </a>
+  </div>
+
+  <!-- Vista Móvil: Tarjetas (block md:hidden) -->
+  <div class="grid grid-cols-1 gap-3 md:hidden">
+    <% if (gastos.length === 0) { %>
+      <div class="p-8 text-center bg-white rounded-2xl border border-slate-200 text-slate-500 text-sm">
+        No hay gastos registrados en esta categoría.
+      </div>
+    <% } %>
+
+    <% gastos.forEach(function(item) { %>
+      <div class="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm space-y-2.5">
+        <div class="flex items-start justify-between">
+          <div>
+            <span class="inline-block px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-slate-100 text-slate-700 rounded-md">
+              <%= item.categoria.replace('_', ' ') %>
+            </span>
+            <p class="text-base font-bold text-slate-900 mt-1 leading-snug"><%= item.descripcion %></p>
+          </div>
+          <span class="text-base font-black text-rose-700">
+            -<%= formatMoney(item.monto) %>
+          </span>
+        </div>
+
+        <div class="pt-2 border-t border-slate-100 text-xs text-slate-600 space-y-1">
+          <div class="flex justify-between">
+            <span class="text-slate-500">Fecha:</span>
+            <span class="font-medium text-slate-800"><%= formatDate(item.fecha_gasto) %></span>
+          </div>
+
+          <% if (item.vehiculo_placa) { %>
+            <div class="flex justify-between text-slate-800 font-semibold">
+              <span>Vehículo:</span>
+              <span>🚚 <%= item.vehiculo_placa %> (<%= item.vehiculo_modelo %>)</span>
+            </div>
+          <% } %>
+
+          <% if (item.proveedor_nombre) { %>
+            <div class="flex justify-between">
+              <span class="text-slate-500">Proveedor:</span>
+              <span class="font-medium text-slate-800"><%= item.proveedor_nombre %></span>
+            </div>
+          <% } %>
+
+          <div class="flex justify-between text-[11px] text-slate-400 pt-1">
+            <span>Comprobante: <%= item.numero_comprobante || 'N/A' %></span>
+            <span>Reg: <%= item.registrado_por_nombre %></span>
+          </div>
+        </div>
+      </div>
+    <% }); %>
+  </div>
+
+  <!-- Vista Escritorio: Tabla (hidden md:table) -->
+  <div class="hidden md:block bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+    <div class="overflow-x-auto">
+      <table class="w-full text-left border-collapse text-sm">
+        <thead>
+          <tr class="bg-slate-50/80 border-b border-slate-200 text-xs font-bold text-slate-600 uppercase tracking-wider">
+            <th class="py-3.5 px-4">Fecha</th>
+            <th class="py-3.5 px-4">Categoría</th>
+            <th class="py-3.5 px-4">Descripción / Concepto</th>
+            <th class="py-3.5 px-4">Vehículo Asociado</th>
+            <th class="py-3.5 px-4">Proveedor</th>
+            <th class="py-3.5 px-4">Comprobante</th>
+            <th class="py-3.5 px-4 text-right">Monto</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+          <% if (gastos.length === 0) { %>
+            <tr>
+              <td colspan="7" class="py-8 text-center text-slate-500">No hay egresos registrados.</td>
+            </tr>
+          <% } %>
+
+          <% gastos.forEach(function(item) { %>
+            <tr class="hover:bg-slate-50/60 transition">
+              <td class="py-3.5 px-4 text-slate-700 whitespace-nowrap"><%= formatDate(item.fecha_gasto) %></td>
+              <td class="py-3.5 px-4">
+                <span class="inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-800">
+                  <%= item.categoria.replace('_', ' ') %>
+                </span>
+              </td>
+              <td class="py-3.5 px-4 font-semibold text-slate-900"><%= item.descripcion %></td>
+              <td class="py-3.5 px-4 text-slate-700">
+                <% if (item.vehiculo_placa) { %>
+                  <span class="font-bold text-slate-900">🚚 <%= item.vehiculo_placa %></span>
+                  <span class="text-xs text-slate-500 block"><%= item.vehiculo_modelo %></span>
+                <% } else { %>
+                  <span class="text-slate-400">-</span>
+                <% } %>
+              </td>
+              <td class="py-3.5 px-4 text-slate-600"><%= item.proveedor_nombre || '-' %></td>
+              <td class="py-3.5 px-4 font-mono text-xs text-slate-600"><%= item.numero_comprobante || '-' %></td>
+              <td class="py-3.5 px-4 text-right font-black text-rose-700 whitespace-nowrap">
+                -<%= formatMoney(item.monto) %>
+              </td>
+            </tr>
+          <% }); %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,246 @@
+<div class="max-w-4xl mx-auto space-y-6">
+  
+  <!-- Barra de Acciones Superior (Oculta en Impresión) -->
+  <div class="no-print bg-white border border-slate-200 rounded-2xl p-4 sm:p-5 shadow-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+    <div class="flex items-center space-x-3">
+      <a href="/pedidos" class="p-2.5 rounded-xl border border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+      </a>
+      <div>
+        <div class="flex items-center space-x-2">
+          <span class="px-2.5 py-0.5 rounded text-xs font-bold <%= pedido.tipo_documento === 'VENTA' ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-800' %>">
+            <%= pedido.tipo_documento %>
+          </span>
+          <h1 class="text-xl font-extrabold text-slate-900 font-mono"><%= pedido.codigo_orden %></h1>
+        </div>
+        <p class="text-xs text-slate-500 font-medium">Estado: <strong class="text-slate-800"><%= pedido.estado %></strong></p>
+      </div>
+    </div>
+
+    <div class="flex flex-wrap items-center gap-2">
+      <!-- Botón Imprimir / PDF -->
+      <button 
+        type="button" 
+        onclick="window.print()" 
+        class="h-12 px-5 inline-flex items-center justify-center space-x-2 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-800 font-bold text-sm shadow-sm transition flex-1 sm:flex-initial"
+      >
+        <svg class="w-4 h-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path>
+        </svg>
+        <span>Imprimir / PDF</span>
+      </button>
+
+      <!-- Botón para Convertir a Venta (Solo si es Cotización activa) -->
+      <% if (pedido.tipo_documento === 'COTIZACION' && pedido.estado !== 'CANCELADO') { %>
+        <form action="/pedidos/<%= pedido.id %>/convertir" method="POST" onsubmit="return confirm('¿Estás seguro de convertir esta cotización en una venta formal? Se validará el inventario disponible y se descontará el stock.');" class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+          <select name="metodo_pago" class="h-12 px-3 text-xs font-bold bg-slate-50 hover:bg-white border border-slate-300 rounded-xl text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-900 transition" title="Forma de pago de la venta">
+            <option value="EFECTIVO" <%= pedido.metodo_pago === 'EFECTIVO' ? 'selected' : '' %>>Pago: Efectivo (Cobrado)</option>
+            <option value="TRANSFERENCIA" <%= pedido.metodo_pago === 'TRANSFERENCIA' ? 'selected' : '' %>>Pago: Transferencia (Cobrado)</option>
+            <option value="CREDITO" <%= pedido.metodo_pago === 'CREDITO' ? 'selected' : '' %>>Pago: Crédito (Pendiente)</option>
+          </select>
+
+          <% if (typeof vehiculos !== 'undefined' && vehiculos && vehiculos.length > 0) { %>
+            <select name="vehiculo_id" class="h-12 px-3 text-xs font-medium bg-slate-50 hover:bg-white border border-slate-300 rounded-xl text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-900 transition" title="Vehículo de despacho">
+              <option value="">Sin Transporte / Retiro Almacén</option>
+              <% vehiculos.forEach(function(v) { %>
+                <option value="<%= v.id %>" <%= pedido.vehiculo_id === v.id ? 'selected' : '' %>><%= v.placa %> - <%= v.modelo %></option>
+              <% }); %>
+            </select>
+          <% } %>
+
+          <button 
+            type="submit" 
+            class="h-12 px-5 inline-flex items-center justify-center space-x-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-sm shadow-md transition whitespace-nowrap"
+          >
+            <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+            <span>Convertir a Venta</span>
+          </button>
+        </form>
+      <% } %>
+
+      <!-- Botón para Confirmar Pago / Marcar como Cobrado (Solo si es Venta en PENDIENTE) -->
+      <% if (pedido.tipo_documento === 'VENTA' && pedido.estado === 'PENDIENTE') { %>
+        <form action="/pedidos/<%= pedido.id %>/cobrar" method="POST" onsubmit="return confirm('¿Confirmar el cobro total de esta orden (<%= formatMoney(pedido.total) %>)? Pasará a estado PAGADO y se registrará en los ingresos.');" class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+          <div class="flex items-center space-x-1.5">
+            <span class="text-xs font-bold text-slate-500 uppercase sm:inline hidden">Medio:</span>
+            <select name="metodo_pago" class="h-12 px-3 text-xs font-bold bg-slate-50 hover:bg-white border border-slate-300 rounded-xl text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-900 transition">
+              <option value="EFECTIVO" <%= pedido.metodo_pago === 'EFECTIVO' ? 'selected' : '' %>>Efectivo</option>
+              <option value="TRANSFERENCIA" <%= pedido.metodo_pago === 'TRANSFERENCIA' ? 'selected' : '' %>>Transferencia</option>
+              <option value="CREDITO" <%= pedido.metodo_pago === 'CREDITO' ? 'selected' : '' %>>Crédito Liquidado</option>
+            </select>
+          </div>
+          <button 
+            type="submit" 
+            class="h-12 px-5 inline-flex items-center justify-center space-x-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm shadow-md transition whitespace-nowrap"
+          >
+            <svg class="w-4 h-4 text-emerald-100" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path>
+            </svg>
+            <span>Confirmar Pago / Marcar como Cobrado</span>
+          </button>
+        </form>
+      <% } %>
+    </div>
+  </div>
+
+  <!-- Tarjeta de Alerta Informativa (Solo cuando VENTA está PENDIENTE) -->
+  <% if (pedido.tipo_documento === 'VENTA' && pedido.estado === 'PENDIENTE') { %>
+    <div class="no-print bg-amber-50 border-l-4 border-amber-500 rounded-2xl p-4 sm:p-5 text-amber-950 shadow-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div class="flex items-center space-x-3.5">
+        <div class="w-10 h-10 rounded-xl bg-amber-100 border border-amber-200 text-amber-800 flex items-center justify-center font-black text-lg flex-shrink-0">
+          !
+        </div>
+        <div>
+          <h4 class="font-extrabold text-amber-900 text-sm">Venta Registrada pero Pendiente de Cobro</h4>
+          <p class="text-xs text-amber-800 font-medium mt-0.5">
+            Esta orden figura como <strong>VENTA</strong> en estado <strong>PENDIENTE</strong> (<%= pedido.metodo_pago %>). No sumará a los ingresos efectivamente cobrados ni a utilidades netas hasta que se registre su cobro con el botón superior.
+          </p>
+        </div>
+      </div>
+    </div>
+  <% } %>
+
+  <!-- Hoja Oficial Imprimible (Diseñada para A4 / Impresión Limpia) -->
+  <div class="print-sheet bg-white border border-slate-200 rounded-2xl p-6 sm:p-10 shadow-sm text-slate-900">
+    
+    <!-- Encabezado Corporativo -->
+    <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between pb-6 border-b border-slate-200 gap-4">
+      <div class="flex items-center space-x-3.5">
+        <div class="w-12 h-12 rounded-xl bg-slate-900 text-white flex items-center justify-center font-black text-xl flex-shrink-0">
+          C
+        </div>
+        <div>
+          <h2 class="text-xl font-black tracking-tight text-slate-900 leading-tight">DISTRIBUIDORA CORONADO</h2>
+          <p class="text-xs text-slate-600 font-medium">Materiales de Construcción & Agregados</p>
+          <p class="text-[11px] text-slate-500 font-mono">NIT: 900.852.147-3 | Tel: (601) 745-8900</p>
+          <p class="text-[11px] text-slate-500">Zona Industrial El Sol, Bodega 12</p>
+        </div>
+      </div>
+
+      <div class="text-left sm:text-right bg-slate-50 sm:bg-transparent p-3 sm:p-0 rounded-xl">
+        <span class="inline-block px-3 py-1 text-xs font-black uppercase tracking-wider rounded-lg <%= pedido.tipo_documento === 'VENTA' ? 'bg-slate-900 text-white' : 'bg-slate-200 text-slate-800' %>">
+          <%= pedido.tipo_documento === 'VENTA' ? 'COMPROBANTE DE VENTA' : 'COTIZACIÓN FORMAL' %>
+        </span>
+        <p class="text-lg font-black font-mono mt-1 text-slate-900"><%= pedido.codigo_orden %></p>
+        <p class="text-xs text-slate-500 font-medium mt-0.5">Fecha: <%= formatDate(pedido.creado_en) %></p>
+        <% if (pedido.fecha_vencimiento) { %>
+          <p class="text-xs text-slate-500 font-medium">Vencimiento: <%= formatDate(pedido.fecha_vencimiento) %></p>
+        <% } %>
+      </div>
+    </div>
+
+    <!-- Información del Cliente y Despacho -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 py-6 border-b border-slate-200 text-xs sm:text-sm">
+      <div class="space-y-1">
+        <p class="font-bold uppercase tracking-wider text-slate-500 text-[11px]">Datos del Cliente:</p>
+        <p class="text-base font-extrabold text-slate-900"><%= pedido.cliente_nombre %></p>
+        <p class="text-slate-600"><span class="font-semibold">NIT / Identificación:</span> <%= pedido.cliente_nit %></p>
+        <p class="text-slate-600"><span class="font-semibold">Teléfono:</span> <%= pedido.cliente_telefono || 'No registrado' %></p>
+        <p class="text-slate-600"><span class="font-semibold">Dirección:</span> <%= pedido.cliente_direccion || 'Entrega en Almacén' %></p>
+      </div>
+
+      <div class="space-y-1 sm:text-right">
+        <p class="font-bold uppercase tracking-wider text-slate-500 text-[11px]">Condiciones Logísticas:</p>
+        <p class="text-slate-700"><span class="font-semibold">Asesor Comercial:</span> <%= pedido.vendedor_nombre %></p>
+        <p class="text-slate-700"><span class="font-semibold">Forma de Pago:</span> <%= pedido.metodo_pago %></p>
+        <% if (pedido.vehiculo_placa) { %>
+          <p class="text-slate-900 font-semibold mt-1">
+            🚚 Transporte: <%= pedido.vehiculo_modelo %> (<%= pedido.vehiculo_placa %>)
+          </p>
+          <p class="text-slate-600 text-xs">Conductor: <%= pedido.conductor_asignado %></p>
+        <% } %>
+      </div>
+    </div>
+
+    <!-- Tabla de Ítems / Materiales -->
+    <div class="py-6">
+      <table class="w-full text-left border-collapse text-xs sm:text-sm">
+        <thead>
+          <tr class="border-b-2 border-slate-900 text-xs font-bold text-slate-900 uppercase">
+            <th class="py-3 px-2">Código</th>
+            <th class="py-3 px-2">Descripción del Material</th>
+            <th class="py-3 px-2 text-center">Unidad</th>
+            <th class="py-3 px-2 text-right">Cant.</th>
+            <th class="py-3 px-2 text-right">Precio Unit.</th>
+            <th class="py-3 px-2 text-right">Total</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-200">
+          <% detalles.forEach(function(item) { %>
+            <tr>
+              <td class="py-3.5 px-2 font-mono text-slate-600"><%= item.codigo_sku %></td>
+              <td class="py-3.5 px-2 font-semibold text-slate-900"><%= item.producto_nombre %></td>
+              <td class="py-3.5 px-2 text-center text-slate-600"><%= item.unidad_medida %></td>
+              <td class="py-3.5 px-2 text-right font-bold text-slate-900"><%= Number(item.cantidad).toFixed(2) %></td>
+              <td class="py-3.5 px-2 text-right text-slate-700"><%= formatMoney(item.precio_unitario) %></td>
+              <td class="py-3.5 px-2 text-right font-black text-slate-900"><%= formatMoney(item.precio_total) %></td>
+            </tr>
+          <% }); %>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Resumen de Totales y Notas -->
+    <div class="pt-4 border-t-2 border-slate-900 grid grid-cols-1 sm:grid-cols-2 gap-6 items-start">
+      <div class="text-xs text-slate-500 space-y-2">
+        <p class="font-bold text-slate-700 uppercase tracking-wider text-[11px]">Observaciones & Condiciones:</p>
+        <p class="leading-relaxed"><%= pedido.observaciones || 'Cotización formal sujeta a confirmación de pedido y condiciones generales de despacho.' %></p>
+        <p class="text-[10px] text-slate-400">Precios expresados en moneda legal. Descargue en obra sujeto a accesibilidad de vía.</p>
+      </div>
+
+      <div class="space-y-2 bg-slate-50 p-4 rounded-xl border border-slate-200 sm:max-w-xs sm:ml-auto w-full">
+        <div class="flex justify-between text-xs sm:text-sm text-slate-600">
+          <span>Subtotal:</span>
+          <span class="font-semibold text-slate-900"><%= formatMoney(pedido.subtotal) %></span>
+        </div>
+        <div class="flex justify-between text-xs sm:text-sm text-slate-600">
+          <span>Impuestos:</span>
+          <span class="font-semibold text-slate-900"><%= formatMoney(pedido.impuesto) %></span>
+        </div>
+        <div class="pt-2 border-t border-slate-300 flex justify-between text-base sm:text-lg font-black text-slate-900">
+          <span>Total:</span>
+          <span><%= formatMoney(pedido.total) %></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Líneas de Firma / Aprobación -->
+    <div class="mt-14 pt-8 grid grid-cols-2 gap-8 text-center text-xs text-slate-500">
+      <div>
+        <div class="border-t border-slate-400 w-48 mx-auto mb-1"></div>
+        <p class="font-bold text-slate-800">Distribuidora Coronado</p>
+        <p>Despachos & Logística</p>
+      </div>
+      <div>
+        <div class="border-t border-slate-400 w-48 mx-auto mb-1"></div>
+        <p class="font-bold text-slate-800"><%= pedido.cliente_nombre %></p>
+        <p>Aceptado / Recibido Conforme</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Información de Comisión (Solo visible para Socio, Admin o el Vendedor dueño) -->
+  <% if (comision) { %>
+    <div class="no-print bg-amber-50 border border-amber-200 rounded-2xl p-4 sm:p-5 text-amber-950 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-sm">
+      <div class="flex items-center space-x-3">
+        <div class="w-8 h-8 rounded-lg bg-amber-200 flex items-center justify-center font-bold text-amber-900">
+          %
+        </div>
+        <div>
+          <p class="font-bold">Comisión Comercial Vinculada</p>
+          <p class="text-xs text-amber-800 font-medium">
+            Asesor: <strong><%= pedido.vendedor_nombre %></strong> (<%= pedido.vendedor_comision %>%) | Monto: <strong><%= formatMoney(comision.monto) %></strong>
+          </p>
+        </div>
+      </div>
+      <div class="flex items-center space-x-2">
+        <span class="px-2.5 py-0.5 rounded-full text-xs font-bold <%= comision.estado === 'PAGADO' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-200 text-amber-900' %>">
+          <%= comision.estado %>
+        </span>
+      </div>
+    </div>
+  <% } %>
+
+</div>

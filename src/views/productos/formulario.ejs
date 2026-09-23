@@ -1,0 +1,165 @@
+<div class="max-w-3xl mx-auto">
+  <div class="mb-6 flex items-center justify-between">
+    <div>
+      <h1 class="text-2xl font-bold text-slate-900 tracking-tight"><%= producto ? 'Editar Producto' : 'Nuevo Producto en Catálogo' %></h1>
+      <p class="text-sm text-slate-500 font-medium">Defina los parámetros comerciales, stock e indicadores de alerta</p>
+    </div>
+    <a href="/productos" class="inline-flex items-center space-x-1 text-sm font-semibold text-slate-600 hover:text-slate-900">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+      <span>Volver</span>
+    </a>
+  </div>
+
+  <div class="bg-white border border-slate-200 rounded-2xl p-5 sm:p-8 shadow-sm">
+    <form action="<%= accion %>" method="POST" class="space-y-6">
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+        <!-- SKU -->
+        <div>
+          <label for="codigo_sku" class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-2">
+            Código SKU *
+          </label>
+          <input 
+            type="text" 
+            id="codigo_sku" 
+            name="codigo_sku" 
+            required 
+            placeholder="Ej. CEM-PORT-01"
+            value="<%= producto ? producto.codigo_sku : '' %>"
+            class="w-full h-14 px-4 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 placeholder-slate-400 focus:bg-white focus:ring-2 focus:ring-slate-900 focus:outline-none uppercase text-base transition"
+          >
+        </div>
+
+        <!-- Categoría -->
+        <div>
+          <label for="categoria" class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-2">
+            Categoría *
+          </label>
+          <select 
+            id="categoria" 
+            name="categoria" 
+            required
+            class="w-full h-14 px-4 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 focus:bg-white focus:ring-2 focus:ring-slate-900 focus:outline-none text-base transition"
+          >
+            <option value="">Seleccione categoría...</option>
+            <option value="Cementos" <%= producto && producto.categoria === 'Cementos' ? 'selected' : '' %>>Cementos</option>
+            <option value="Agregados" <%= producto && producto.categoria === 'Agregados' ? 'selected' : '' %>>Agregados</option>
+            <option value="Acero" <%= producto && producto.categoria === 'Acero' ? 'selected' : '' %>>Acero de Refuerzo</option>
+            <option value="Acabados" <%= producto && producto.categoria === 'Acabados' ? 'selected' : '' %>>Acabados y Yeso</option>
+            <option value="Otros" <%= producto && producto.categoria === 'Otros' ? 'selected' : '' %>>Otros Materiales</option>
+          </select>
+        </div>
+
+        <!-- Nombre del Producto -->
+        <div class="sm:col-span-2">
+          <label for="nombre" class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-2">
+            Nombre / Descripción del Material *
+          </label>
+          <input 
+            type="text" 
+            id="nombre" 
+            name="nombre" 
+            required 
+            placeholder="Ej. Cemento Gris Tipo I Uso General 50kg"
+            value="<%= producto ? producto.nombre : '' %>"
+            class="w-full h-14 px-4 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 placeholder-slate-400 focus:bg-white focus:ring-2 focus:ring-slate-900 focus:outline-none text-base transition"
+          >
+        </div>
+
+        <!-- Unidad de Medida -->
+        <div>
+          <label for="unidad_medida" class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-2">
+            Unidad de Medida *
+          </label>
+          <select 
+            id="unidad_medida" 
+            name="unidad_medida" 
+            required
+            class="w-full h-14 px-4 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 focus:bg-white focus:ring-2 focus:ring-slate-900 focus:outline-none text-base transition"
+          >
+            <option value="BOLSA" <%= producto && producto.unidad_medida === 'BOLSA' ? 'selected' : '' %>>BOLSA</option>
+            <option value="TONELADA" <%= producto && producto.unidad_medida === 'TONELADA' ? 'selected' : '' %>>TONELADA</option>
+            <option value="M3" <%= producto && producto.unidad_medida === 'M3' ? 'selected' : '' %>>M3 (Metro Cúbico)</option>
+          </select>
+        </div>
+
+        <!-- Existencia Inicial / Actual -->
+        <div>
+          <label for="existencia" class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-2">
+            Existencia / Stock Actual *
+          </label>
+          <input 
+            type="number" 
+            step="0.01" 
+            id="existencia" 
+            name="existencia" 
+            required 
+            placeholder="0.00"
+            value="<%= producto ? producto.existencia : '0' %>"
+            class="w-full h-14 px-4 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 placeholder-slate-400 focus:bg-white focus:ring-2 focus:ring-slate-900 focus:outline-none text-base transition"
+          >
+        </div>
+
+        <!-- Precio Compra -->
+        <div>
+          <label for="precio_compra" class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-2">
+            Costo de Compra (Bs) *
+          </label>
+          <input 
+            type="number" 
+            step="0.01" 
+            id="precio_compra" 
+            name="precio_compra" 
+            required 
+            placeholder="0.00"
+            value="<%= producto ? producto.precio_compra : '' %>"
+            class="w-full h-14 px-4 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 placeholder-slate-400 focus:bg-white focus:ring-2 focus:ring-slate-900 focus:outline-none text-base transition"
+          >
+        </div>
+
+        <!-- Precio Venta -->
+        <div>
+          <label for="precio_venta" class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-2">
+            Precio de Venta (Bs) *
+          </label>
+          <input 
+            type="number" 
+            step="0.01" 
+            id="precio_venta" 
+            name="precio_venta" 
+            required 
+            placeholder="0.00"
+            value="<%= producto ? producto.precio_venta : '' %>"
+            class="w-full h-14 px-4 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 placeholder-slate-400 focus:bg-white focus:ring-2 focus:ring-slate-900 focus:outline-none text-base transition"
+          >
+        </div>
+
+        <!-- Alerta de Existencia Mínima -->
+        <div class="sm:col-span-2">
+          <label for="alerta_existencia_minima" class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-2">
+            Alerta de Stock Mínimo
+          </label>
+          <input 
+            type="number" 
+            step="0.01" 
+            id="alerta_existencia_minima" 
+            name="alerta_existencia_minima" 
+            placeholder="10.00"
+            value="<%= producto ? producto.alerta_existencia_minima : '10' %>"
+            class="w-full h-14 px-4 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 placeholder-slate-400 focus:bg-white focus:ring-2 focus:ring-slate-900 focus:outline-none text-base transition"
+          >
+          <p class="text-xs text-slate-500 mt-1.5">El sistema emitirá una alerta visual cuando el stock sea menor o igual a este valor.</p>
+        </div>
+      </div>
+
+      <!-- Botones de Acción -->
+      <div class="pt-4 border-t border-slate-100 flex flex-col-reverse sm:flex-row sm:justify-end gap-3">
+        <a href="/productos" class="h-14 px-6 inline-flex items-center justify-center rounded-xl border border-slate-300 text-slate-700 hover:bg-slate-50 font-semibold text-sm transition">
+          Cancelar
+        </a>
+        <button type="submit" class="h-14 px-8 inline-flex items-center justify-center rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-sm shadow-md transition">
+          <%= producto ? 'Actualizar Producto' : 'Guardar Producto' %>
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
